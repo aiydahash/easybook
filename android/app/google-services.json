@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "140407769855",
+    "project_id": "easybook-database",
+    "storage_bucket": "easybook-database.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140407769855:android:8d88006e7392e2c43e5aca",
+        "android_client_info": {
+          "package_name": "com.example.easybook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2aZCvCmV9MV4_z3KCYrh7e-jvzRfUg_I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
