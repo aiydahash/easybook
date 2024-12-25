@@ -5,7 +5,8 @@ import 'main-page.dart';
 import 'user_manager.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensures proper Flutter initialization
+  WidgetsFlutterBinding
+      .ensureInitialized(); // Ensures proper Flutter initialization
 
   try {
     // Check if Firebase is already initialized
@@ -34,7 +35,6 @@ void main() async {
 
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
