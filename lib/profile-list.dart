@@ -107,10 +107,10 @@ class _UserListPageState extends State<UserListPage> {
                 children: [
                   // Student Profiles
                   ...students.map((user) => UserCard(
-                    name: user.name,
-                    role: user.role,
-                    icon: Icons.person,
-                  )),
+                        name: user.name,
+                        role: user.role,
+                        icon: Icons.person,
+                      )),
                   const SizedBox(height: 20),
                   const Text(
                     'Staff',
@@ -123,10 +123,10 @@ class _UserListPageState extends State<UserListPage> {
                   const SizedBox(height: 10),
                   // Staff Profiles
                   ...staff.map((user) => UserCard(
-                    name: user.name,
-                    role: user.role,
-                    icon: Icons.person_outline,
-                  )),
+                        name: user.name,
+                        role: user.role,
+                        icon: Icons.person_outline,
+                      )),
                 ],
               ),
             ),
@@ -173,7 +173,8 @@ class _UserListPageState extends State<UserListPage> {
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BookingHistoryPage()),
+                MaterialPageRoute(
+                    builder: (context) => const BookingHistoryPage()),
               );
               break;
             case 3:
@@ -191,7 +192,6 @@ class _UserListPageState extends State<UserListPage> {
 
 extension on User {
   get role => null;
-  
   get name => null;
 }
 
@@ -201,7 +201,7 @@ class UserCard extends StatelessWidget {
   final IconData icon;
 
   const UserCard({
-    super.key, 
+    super.key,
     required this.name,
     required this.role,
     required this.icon,
@@ -231,7 +231,7 @@ class UserCard extends StatelessWidget {
         subtitle: Text(
           role,
           style: const TextStyle(
-            color:Color.fromARGB(255, 1, 10, 61),
+            color: Color.fromARGB(255, 1, 10, 61),
             fontSize: 14,
           ),
         ),
@@ -249,8 +249,11 @@ class UserCard extends StatelessWidget {
 /// Retrieve all users from Firestore
 Future<List<AppUser>> getUsers() async {
   try {
-    final querySnapshot = await FirebaseFirestore.instance.collection('users').get();
-    return querySnapshot.docs.map((doc) => AppUser.fromMap(doc.data())).toList();
+    final querySnapshot =
+        await FirebaseFirestore.instance.collection('users').get();
+    return querySnapshot.docs
+        .map((doc) => AppUser.fromMap(doc.data()))
+        .toList();
   } catch (e) {
     print('Error fetching users: $e');
     return [];
@@ -263,9 +266,7 @@ void initState() {
 }
 
 Future<void> _fetchUsers() async {
-  setState(() {
-  });
+  setState(() {});
 }
 
-void setState(Null Function() param0) {
-}
+void setState(Null Function() param0) {}
