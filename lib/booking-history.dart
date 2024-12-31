@@ -63,53 +63,115 @@ class BookingHistoryPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('bookings')
-              .orderBy('timestamp', descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        child: Column(
+          children: [
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('bookings')
+                    .orderBy('timestamp', descending: true)
+                    .snapshots(),
+                builder: (context, roomSnapshot) {
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('facility_bookings')
+                        .orderBy('timestamp', descending: true)
+                        .snapshots(),
+                    builder: (context, facilitySnapshot) {
+                      if (roomSnapshot.connectionState ==
+                              ConnectionState.waiting ||
+                          facilitySnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-            if (snapshot.hasError) {
-              return const Center(child: Text('Error loading bookings'));
-            }
+                      if (roomSnapshot.hasError || facilitySnapshot.hasError) {
+                        return const Center(
+                            child: Text('Error loading bookings'));
+                      }
 
-            final bookings = snapshot.data?.docs ?? [];
+                      final List<BookingItem> allBookings = [];
 
-            if (bookings.isEmpty) {
-              return const Center(child: Text('No bookings available.'));
-            }
+                      if (roomSnapshot.hasData) {
+                        for (var doc in roomSnapshot.data!.docs) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          allBookings.add(
+                            BookingItem(
+                              id: doc.id, // Add the document ID
+                              name: data['roomName'] ?? 'Unknown Room',
+                              type: 'Study Room',
+                              peopleCount: data['peopleCount'] ?? 0,
+                              status: data['status'] ?? 'UPCOMING',
+                              timestamp: data['timestamp'] as Timestamp,
+                              date: data['date'] ?? 'Unknown Date',
+                              time: data['time'] ?? 'Unknown Time',
+                            ),
+                          );
+                        }
+                      }
 
-            return ListView.builder(
-              itemCount: bookings.length,
-              itemBuilder: (context, index) {
-                final booking = bookings[index];
-                final data = booking.data() as Map<String, dynamic>;
+                      if (facilitySnapshot.hasData) {
+                        for (var doc in facilitySnapshot.data!.docs) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          allBookings.add(
+                            BookingItem(
+                              id: doc.id, // Add the document ID
+                              name: data['facilityName'] ?? 'Unknown Facility',
+                              type: 'Facility',
+                              peopleCount: data['peopleCount'] ?? 0,
+                              status: data['status'] ?? 'UPCOMING',
+                              timestamp: data['timestamp'] as Timestamp,
+                              date: data['date'] ?? 'Unknown Date',
+                              time: data['time'] ?? 'Unknown Time',
+                            ),
+                          );
+                        }
+                      }
 
-                return BookingCard(
-                  roomName: data['roomName'] ?? 'Unknown Room',
-                  peopleCount: data['peopleCount'] ?? 0,
-                  status: data['status'] ?? 'UPCOMING',
-                  statusColor:
-                      data['status'] == 'PAST' ? Colors.yellow : Colors.black,
-                  details: BookingDetails(
-                    date: data['date'] ?? 'Unknown Date',
-                    time: data['time'] ?? 'Unknown Time',
-                  ),
-                );
-              },
-            );
-          },
+                      allBookings
+                          .sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+                      if (allBookings.isEmpty) {
+                        return const Center(
+                            child: Text('No bookings available.'));
+                      }
+
+                      return ListView.builder(
+                        itemCount: allBookings.length,
+                        itemBuilder: (context, index) {
+                          final booking = allBookings[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 15.0),
+                            child: BookingCard(
+                              bookingId: booking.id, // Pass the booking ID
+                              name: booking.name,
+                              type: booking.type,
+                              peopleCount: booking.peopleCount,
+                              status: booking.status,
+                              statusColor: booking.status == 'PAST'
+                                  ? Colors.yellow
+                                  : Colors.black,
+                              details: BookingDetails(
+                                date: booking.date,
+                                time: booking.time,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -158,13 +220,38 @@ class BookingHistoryPage extends StatelessWidget {
           }
         },
       ),
-      backgroundColor: const Color(0xFF010A3D), // Page background color
+      backgroundColor: const Color(0xFF010A3D),
     );
   }
 }
 
+// Data class to hold booking information
+class BookingItem {
+  final String id; // Added ID field for Firebase document ID
+  final String name;
+  final String type;
+  final int peopleCount;
+  final String status;
+  final Timestamp timestamp;
+  final String date;
+  final String time;
+
+  BookingItem({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.peopleCount,
+    required this.status,
+    required this.timestamp,
+    required this.date,
+    required this.time,
+  });
+}
+
 class BookingCard extends StatelessWidget {
-  final String roomName;
+  final String bookingId; // New booking ID field
+  final String name;
+  final String type;
   final int peopleCount;
   final String status;
   final Color statusColor;
@@ -172,12 +259,33 @@ class BookingCard extends StatelessWidget {
 
   const BookingCard({
     super.key,
-    required this.roomName,
+    required this.bookingId, // Initialize bookingId
+    required this.name,
+    required this.type,
     required this.peopleCount,
     required this.status,
     required this.statusColor,
     this.details,
   });
+
+  // Function to delete the booking
+  Future<void> _deleteBooking(BuildContext context) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(bookingId)
+          .delete();
+      await FirebaseFirestore.instance
+          .collection('facility_bookings')
+          .doc(bookingId)
+          .delete();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Booking deleted')));
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error deleting booking: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,14 +301,29 @@ class BookingCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  roomName,
-                  style: const TextStyle(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        type,
+                        style: const TextStyle(
+                          fontSize: 14.0,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
                 Container(
                   decoration: BoxDecoration(
                     color: statusColor,
@@ -258,6 +381,15 @@ class BookingCard extends StatelessWidget {
                   ),
                 ),
               ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  onPressed: () => _deleteBooking(context),
+                ),
+              ],
+            ),
           ],
         ),
       ),

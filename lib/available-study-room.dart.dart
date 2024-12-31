@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'main-page.dart';
 import 'search-page.dart';
 import 'booking-history.dart';
 import 'profile-page.dart';
 import 'notification-page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AvailableStudyRoomPage extends StatelessWidget {
   const AvailableStudyRoomPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // List of facilities with their names and capacities
     final List<Map<String, String>> facilities = [
       {'name': 'Study Room 1', 'capacity': 'max 8 people'},
       {'name': 'Study Room 2', 'capacity': 'max 8 people'},
@@ -91,39 +90,7 @@ class AvailableStudyRoomPage extends StatelessWidget {
                   return FacilityCard(
                     name: facility['name']!,
                     capacity: facility['capacity']!,
-                    onBookPressed: () async {
-                      final facilityName = facility['name']!;
-                      final bookingData = {
-                        'roomName': facilityName,
-                        'capacity': facility['capacity']!,
-                        'peopleCount': 4, // Example value: you can modify this
-                        'status': 'UPCOMING',
-                        'date': '03/06/2024', // Example static date
-                        'time':
-                            '10:00 A.M. - 11:00 A.M.', // Example static time
-                        'timestamp': FieldValue
-                            .serverTimestamp(), // To track when it was booked
-                      };
-
-                      try {
-                        await FirebaseFirestore.instance
-                            .collection('bookings')
-                            .add(bookingData);
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('$facilityName booked successfully!'),
-                          ),
-                        );
-                      } catch (e) {
-                        print('Error saving booking: $e');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Failed to book the study room'),
-                          ),
-                        );
-                      }
-                    },
+                    onBookPressed: () => showDateTimePicker(context, facility),
                   );
                 },
               ),
@@ -135,7 +102,7 @@ class AvailableStudyRoomPage extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -185,9 +152,56 @@ class AvailableStudyRoomPage extends StatelessWidget {
       ),
     );
   }
+
+  void showDateTimePicker(BuildContext context, Map<String, String> facility) async {
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (selectedDate != null) {
+      final TimeOfDay? selectedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (selectedTime != null) {
+        final bookingDate = '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
+        final bookingTime = '${selectedTime.format(context)}';
+
+        final bookingData = {
+          'roomName': facility['name']!,
+          'capacity': facility['capacity']!,
+          'peopleCount': 4, // Example value, can be modified
+          'status': 'UPCOMING',
+          'date': bookingDate,
+          'time': bookingTime,
+          'timestamp': FieldValue.serverTimestamp(),
+        };
+
+        try {
+          await FirebaseFirestore.instance.collection('bookings').add(bookingData);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${facility['name']} booked successfully for $bookingDate at $bookingTime!'),
+            ),
+          );
+        } catch (e) {
+          print('Error saving booking: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to book the study room'),
+            ),
+          );
+        }
+      }
+    }
+  }
 }
 
-// Widget for individual facility cards
 class FacilityCard extends StatelessWidget {
   final String name;
   final String capacity;
@@ -208,8 +222,7 @@ class FacilityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         title: Text(
           name,
           style: const TextStyle(fontWeight: FontWeight.bold),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'booking-history.dart';
 import 'main-page.dart';
 import 'notification-page.dart';
@@ -63,47 +63,98 @@ class BookingListPage extends StatelessWidget {
         ],
       ),
       backgroundColor: Colors.white,
-      body: ListView(
-        padding: const EdgeInsets.all(20.0),
-        children: const [
-          Padding(
-            padding: EdgeInsets.only(bottom: 20.0), // Adds 20 pixels of space below
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(20.0),
             child: Text(
               'Booking List',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF020B45),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF020B45),
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('bookings')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, roomSnapshot) {
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('facility_bookings')
+                      .orderBy('timestamp', descending: true)
+                      .snapshots(),
+                  builder: (context, facilitySnapshot) {
+                    if (roomSnapshot.connectionState == ConnectionState.waiting ||
+                        facilitySnapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (roomSnapshot.hasError || facilitySnapshot.hasError) {
+                      return const Center(child: Text('Error loading bookings'));
+                    }
+
+                    final List<Map<String, dynamic>> allBookings = [];
+
+                    // Add room bookings
+                    if (roomSnapshot.hasData) {
+                      for (var doc in roomSnapshot.data!.docs) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        allBookings.add({
+                          ...data,
+                          'bookingType': 'room',
+                          'roomName': data['roomName'],
+                        });
+                      }
+                    }
+
+                    // Add facility bookings
+                    if (facilitySnapshot.hasData) {
+                      for (var doc in facilitySnapshot.data!.docs) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        allBookings.add({
+                          ...data,
+                          'bookingType': 'facility',
+                          'roomName': data['facilityName'],
+                        });
+                      }
+                    }
+
+                    // Sort bookings by timestamp
+                    allBookings.sort((a, b) => (b['timestamp'] as Timestamp)
+                        .compareTo(a['timestamp'] as Timestamp));
+
+                    if (allBookings.isEmpty) {
+                      return const Center(child: Text('No bookings available'));
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      itemCount: allBookings.length,
+                      itemBuilder: (context, index) {
+                        final booking = allBookings[index];
+                        return BookingCard(
+                          name: booking['userName'] ?? 'Unknown User',
+                          role: booking['userRole'] ?? 'User',
+                          roomName: booking['roomName'] ?? 'Unknown Room',
+                          bookingDate: booking['date'] ?? '',
+                          bookingTime: booking['time'] ?? '',
+                          status: booking['status'] ?? 'UPCOMING',
+                          statusColor: booking['status'] == 'PAST'
+                              ? Colors.yellow
+                              : Colors.blue,
+                        );
+                      },
+                    );
+                  },
+                );
+              },
             ),
-          ),
-          BookingCard(
-            name: "John Doe",
-            role: "Student",
-            roomName: "Study Room 1",
-            bookingDate: "03/06/2024",
-            bookingTime: "10:00 A.M. - 11:00 A.M.",
-            status: "UPCOMING",
-            statusColor: Colors.blue,
-          ),
-          BookingCard(
-            name: "Jane Smith",
-            role: "Staff",
-            roomName: "Auditorium",
-            bookingDate: "02/06/2024",
-            bookingTime: "01:00 P.M. - 03:00 P.M.",
-            status: "PAST",
-            statusColor: Colors.yellow,
-          ),
-          BookingCard(
-            name: "David Lee",
-            role: "Student",
-            roomName: "Seminar Room 2",
-            bookingDate: "05/06/2024",
-            bookingTime: "11:00 A.M. - 12:00 P.M.",
-            status: "UPCOMING",
-            statusColor: Colors.blue,
           ),
         ],
       ),
@@ -111,7 +162,7 @@ class BookingListPage extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),

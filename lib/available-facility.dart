@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'main-page.dart';
-import 'notification-page.dart';
 import 'search-page.dart';
 import 'booking-history.dart';
 import 'profile-page.dart';
+import 'notification-page.dart';
 
 class AvailableFacilityPage extends StatelessWidget {
   const AvailableFacilityPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // List of facilities with their names and capacities
     final List<Map<String, String>> facilities = [
       {'name': 'Auditorium', 'capacity': 'max 200 people'},
       {'name': 'Computer Lab', 'capacity': 'max 60 people'},
@@ -87,18 +87,14 @@ class AvailableFacilityPage extends StatelessWidget {
                 itemCount: facilities.length,
                 itemBuilder: (context, index) {
                   final facility = facilities[index];
-                  return FacilityCard(
-                    name: facility['name']!,
-                    capacity: facility['capacity']!,
-                    onBookPressed: () {
-                      // Handle booking action for the selected facility
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('${facility['name']} booked successfully!'),
-                        ),
-                      );
-                    },
+                  return Column(
+                    children: [
+                      FacilityCard(
+                        name: facility['name']!,
+                        capacity: facility['capacity']!,
+                        onBookPressed: () => showDateTimePicker(context, facility),
+                      ), // Add space between boxes
+                    ],
                   );
                 },
               ),
@@ -110,7 +106,7 @@ class AvailableFacilityPage extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -160,16 +156,63 @@ class AvailableFacilityPage extends StatelessWidget {
       ),
     );
   }
+
+  void showDateTimePicker(BuildContext context, Map<String, String> facility) async {
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (selectedDate != null) {
+      final TimeOfDay? selectedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (selectedTime != null) {
+        final bookingDate = '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
+        final bookingTime = '${selectedTime.format(context)}';
+
+        final bookingData = {
+          'facilityName': facility['name']!,
+          'capacity': facility['capacity']!,
+          'peopleCount': 4, // Example value, can be modified
+          'status': 'UPCOMING',
+          'date': bookingDate,
+          'time': bookingTime,
+          'timestamp': FieldValue.serverTimestamp(),
+        };
+
+        try {
+          await FirebaseFirestore.instance.collection('facility_bookings').add(bookingData);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${facility['name']} booked successfully for $bookingDate at $bookingTime!'),
+            ),
+          );
+        } catch (e) {
+          print('Error saving booking: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to book the facility'),
+            ),
+          );
+        }
+      }
+    }
+  }
 }
 
-// Widget for individual facility cards
 class FacilityCard extends StatelessWidget {
   final String name;
   final String capacity;
   final VoidCallback onBookPressed;
 
   const FacilityCard({
-    super.key, 
+    super.key,
     required this.name,
     required this.capacity,
     required this.onBookPressed,
@@ -183,8 +226,7 @@ class FacilityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         title: Text(
           name,
           style: const TextStyle(fontWeight: FontWeight.bold),
