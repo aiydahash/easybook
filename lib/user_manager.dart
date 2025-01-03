@@ -23,49 +23,52 @@ class UserManager {
   // User Registration
   /// Register a new user with Firebase Authentication and Firestore.
   static Future<bool> registerUser({
-  required String name,
-  required String matricID,
-  required String email,
-  required String password,
-  required String role,
-}) async {
-  try {
-    UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    required String name,
+    required String matricID,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    try {
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-      'uid': userCredential.user!.uid,
-      'name': name,
-      'matricID': matricID,
-      'email': email,
-      'role': role,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+        'uid': userCredential.user!.uid,
+        'name': name,
+        'matricID': matricID,
+        'email': email,
+        'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    _currentUser = AppUser(
-      id: userCredential.user!.uid,
-      name: name,
-      matricID: matricID,
-      email: email,
-      role: role,
-    );
+      _currentUser = AppUser(
+        id: userCredential.user!.uid,
+        name: name,
+        matricID: matricID,
+        email: email,
+        role: role,
+      );
 
-    await _saveCurrentUser();
-    return true;
-  } catch (e) {
-    debugPrint('Error registering user: $e');
-    rethrow; // Let the calling method handle the error
+      await _saveCurrentUser();
+      return true;
+    } catch (e) {
+      debugPrint('Error registering user: $e');
+      rethrow; // Let the calling method handle the error
+    }
   }
-}
-
 
   // User Authentication
 
-
   /// Login a user using Firebase Authentication
-  static Future<bool> loginUser(String matricID, String password, String selectedRole) async {
+  static Future<bool> loginUser(
+      String matricID, String password, String selectedRole) async {
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -101,10 +104,12 @@ class UserManager {
   }
 
   /// Update the current user's profile in Firestore and locally.
-  static Future<void> updateUserProfile(String matricId, {
+  static Future<void> updateUserProfile(
+    String matricId, {
     required String name,
     String? course,
-    String? semester, required String matricID,
+    String? semester,
+    required String matricID,
   }) async {
     if (_currentUser == null) {
       print('No user is logged in.');
@@ -112,7 +117,8 @@ class UserManager {
     }
 
     try {
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(_currentUser!.id);
+      final userDoc =
+          FirebaseFirestore.instance.collection('users').doc(_currentUser!.id);
       await userDoc.update({
         'name': name,
         if (course != null) 'course': course,
@@ -131,7 +137,6 @@ class UserManager {
     }
   }
 
-
   // User Retrieval
 
   /// Get the currently logged-in user.
@@ -142,17 +147,19 @@ class UserManager {
   /// Fetch all users
   static Future<List<AppUser>> getUsers() async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance.collection('users').get();
-      return querySnapshot.docs.map((doc) => AppUser.fromMap(doc.data())).toList();
+      final querySnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+      return querySnapshot.docs
+          .map((doc) => AppUser.fromMap(doc.data()))
+          .toList();
     } catch (e) {
       print('Error fetching users: $e');
       return [];
     }
   }
 
-
   // Local Storage Operations
-  
+
   /// Save the current user's data locally using SharedPreferences.
   static Future<void> _saveCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
