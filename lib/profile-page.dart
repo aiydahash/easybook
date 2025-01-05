@@ -50,7 +50,17 @@ class _ProfilePageState extends State<ProfilePage> {
       matricId,
       name: fullName,
       course: course,
-      semester: semester, matricID: '',
+      semester: semester,
+      matricID: '',
+    );
+  }
+
+  void _handleLogout() async {
+    await UserManager.logout();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
     );
   }
 
@@ -101,9 +111,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Icons.arrow_circle_left_outlined,
               color: Colors.white,
             ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
@@ -133,13 +141,11 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 30),
-            // Display Profile Details
             ProfileDetail(label: 'Full Name', value: fullName),
             ProfileDetail(label: 'Matric ID', value: matricId),
             ProfileDetail(label: 'Course', value: course),
             ProfileDetail(label: 'Semester', value: semester),
             const SizedBox(height: 30),
-            // Edit Button
             ElevatedButton(
               onPressed: () async {
                 final updatedData = await Navigator.push(
@@ -153,7 +159,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 );
-
                 if (updatedData != null) {
                   _updateProfile(updatedData);
                 }
@@ -174,16 +179,8 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 20),
-            // Logout Button
             ElevatedButton(
-              onPressed: () {
-                // Navigate to Login Page
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false, // Clears the navigation stack
-                );
-              },
+              onPressed: _handleLogout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 shape: RoundedRectangleBorder(
@@ -206,7 +203,7 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -242,8 +239,7 @@ class _ProfilePageState extends State<ProfilePage> {
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (context) => const BookingHistoryPage()),
+                MaterialPageRoute(builder: (context) => const BookingHistoryPage()),
               );
               break;
             case 3:
@@ -257,22 +253,17 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
-  void _handleLogout() async {
-    await UserManager.logout();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
-    );
-  }
 }
 
 class ProfileDetail extends StatelessWidget {
   final String label;
   final String value;
 
-  const ProfileDetail({super.key, required this.label, required this.value});
+  const ProfileDetail({
+    super.key,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {

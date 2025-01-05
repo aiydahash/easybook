@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'main-page.dart';
 import 'notification-page.dart';
@@ -17,18 +15,18 @@ class UserListPage extends StatefulWidget {
 }
 
 class _UserListPageState extends State<UserListPage> {
-  List<AppUser> users = []; // Changed to AppUser
+  List<AppUser> users = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchUsers(); // Call the fetch method without trying to assign to users directly
+    _fetchUsers();
   }
 
   Future<void> _fetchUsers() async {
-    final fetchedUsers = await UserManager.getUsers(); // Await the users
+    final fetchedUsers = await UserManager.getUsers();
     setState(() {
-      users = fetchedUsers; // Assign fetched data to the class variable
+      users = fetchedUsers;
     });
   }
 
@@ -36,6 +34,7 @@ class _UserListPageState extends State<UserListPage> {
   Widget build(BuildContext context) {
     final students = users.where((user) => user.role == 'Student').toList();
     final staff = users.where((user) => user.role == 'Staff').toList();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
@@ -81,9 +80,7 @@ class _UserListPageState extends State<UserListPage> {
               Icons.arrow_circle_left_outlined,
               color: Colors.white,
             ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
@@ -105,7 +102,6 @@ class _UserListPageState extends State<UserListPage> {
             Expanded(
               child: ListView(
                 children: [
-                  // Student Profiles
                   ...students.map((user) => UserCard(
                         name: user.name,
                         role: user.role,
@@ -121,7 +117,6 @@ class _UserListPageState extends State<UserListPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Staff Profiles
                   ...staff.map((user) => UserCard(
                         name: user.name,
                         role: user.role,
@@ -137,7 +132,7 @@ class _UserListPageState extends State<UserListPage> {
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -180,7 +175,7 @@ class _UserListPageState extends State<UserListPage> {
             case 3:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
               break;
           }
@@ -188,11 +183,6 @@ class _UserListPageState extends State<UserListPage> {
       ),
     );
   }
-}
-
-extension on User {
-  get role => null;
-  get name => null;
 }
 
 class UserCard extends StatelessWidget {
@@ -236,7 +226,10 @@ class UserCard extends StatelessWidget {
           ),
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
+          icon: const Icon(
+            Icons.arrow_forward_ios,
+            color: Color.fromARGB(255, 1, 10, 61),
+          ),
           onPressed: () {
             // Navigate to profile details page
           },
@@ -245,28 +238,3 @@ class UserCard extends StatelessWidget {
     );
   }
 }
-
-/// Retrieve all users from Firestore
-Future<List<AppUser>> getUsers() async {
-  try {
-    final querySnapshot =
-        await FirebaseFirestore.instance.collection('users').get();
-    return querySnapshot.docs
-        .map((doc) => AppUser.fromMap(doc.data()))
-        .toList();
-  } catch (e) {
-    print('Error fetching users: $e');
-    return [];
-  }
-}
-
-@override
-void initState() {
-  _fetchUsers();
-}
-
-Future<void> _fetchUsers() async {
-  setState(() {});
-}
-
-void setState(Null Function() param0) {}
