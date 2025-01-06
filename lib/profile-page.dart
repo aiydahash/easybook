@@ -20,7 +20,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late String matricId = '';
   late String email = '';
   late String role = '';
-  
+
   // Role-specific fields
   late String course = '';
   late String semester = '';
@@ -84,7 +84,6 @@ class _ProfilePageState extends State<ProfilePage> {
     await UserManager.updateUserProfile(
       matricId,
       name: fullName,
-      email: email,
       additionalInfo: {
         'course': course,
         'semester': semester,
@@ -183,7 +182,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(height: 30),
-              
+
               // Common fields for all roles
               ProfileDetail(label: 'Full Name', value: fullName),
               ProfileDetail(label: 'Matric ID', value: matricId),

@@ -12,10 +12,10 @@ class AvailableFacilityPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, String>> facilities = [
-      {'name': 'Auditorium', 'capacity': 'max 200 people'},
-      {'name': 'Computer Lab', 'capacity': 'max 60 people'},
-      {'name': 'Executive Lounge', 'capacity': 'max 52 people'},
-      {'name': 'Seminar Room 1', 'capacity': 'max 30 people'},
+      {'name': 'Auditorium', 'capacity': '200 people'},
+      {'name': 'Computer Lab', 'capacity': '60 people'},
+      {'name': 'Executive Lounge', 'capacity': '52 people'},
+      {'name': 'Seminar Room 1', 'capacity': '30 people'},
     ];
 
     return Scaffold(
@@ -29,7 +29,7 @@ class AvailableFacilityPage extends StatelessWidget {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => NotificationPage()),
+              MaterialPageRoute(builder: (context) => const NotificationPage()),
             );
           },
         ),
@@ -92,8 +92,9 @@ class AvailableFacilityPage extends StatelessWidget {
                       FacilityCard(
                         name: facility['name']!,
                         capacity: facility['capacity']!,
-                        onBookPressed: () => showDateTimePicker(context, facility),
-                      ), // Add space between boxes
+                        onBookPressed: () =>
+                            showDateTimePicker(context, facility),
+                      ),
                     ],
                   );
                 },
@@ -130,25 +131,26 @@ class AvailableFacilityPage extends StatelessWidget {
             case 0:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => HomePage()),
+                MaterialPageRoute(builder: (context) => const HomePage()),
               );
               break;
             case 1:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => SearchPage()),
+                MaterialPageRoute(builder: (context) => const SearchPage()),
               );
               break;
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => BookingHistoryPage()),
+                MaterialPageRoute(
+                    builder: (context) => const BookingHistoryPage()),
               );
               break;
             case 3:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
               break;
           }
@@ -157,7 +159,8 @@ class AvailableFacilityPage extends StatelessWidget {
     );
   }
 
-  void showDateTimePicker(BuildContext context, Map<String, String> facility) async {
+  void showDateTimePicker(
+      BuildContext context, Map<String, String> facility) async {
     final DateTime? selectedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -166,40 +169,65 @@ class AvailableFacilityPage extends StatelessWidget {
     );
 
     if (selectedDate != null) {
-      final TimeOfDay? selectedTime = await showTimePicker(
+      final TimeOfDay? startTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
       );
 
-      if (selectedTime != null) {
-        final bookingDate = '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
-        final bookingTime = '${selectedTime.format(context)}';
+      if (startTime != null) {
+        final TimeOfDay? endTime = await showTimePicker(
+          context: context,
+          initialTime: startTime,
+        );
 
-        final bookingData = {
-          'facilityName': facility['name']!,
-          'capacity': facility['capacity']!,
-          'peopleCount': 4, // Example value, can be modified
-          'status': 'UPCOMING',
-          'date': bookingDate,
-          'time': bookingTime,
-          'timestamp': FieldValue.serverTimestamp(),
-        };
+        if (endTime != null) {
+          // Validate that end time is after start time
+          if (endTime.hour < startTime.hour ||
+              (endTime.hour == startTime.hour &&
+                  endTime.minute <= startTime.minute)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('End time must be after start time'),
+              ),
+            );
+            return;
+          }
 
-        try {
-          await FirebaseFirestore.instance.collection('facility_bookings').add(bookingData);
+          final bookingDate =
+              '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
+          final startBookingTime = startTime.format(context);
+          final endBookingTime = endTime.format(context);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${facility['name']} booked successfully for $bookingDate at $bookingTime!'),
-            ),
-          );
-        } catch (e) {
-          print('Error saving booking: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to book the facility'),
-            ),
-          );
+          final bookingData = {
+            'facilityName': facility['name']!,
+            'capacity': facility['capacity']!,
+            'peopleCount': 4, // Example value, can be modified
+            'status': 'UPCOMING',
+            'date': bookingDate,
+            'startTime': startBookingTime,
+            'endTime': endBookingTime,
+            'timestamp': FieldValue.serverTimestamp(),
+          };
+
+          try {
+            await FirebaseFirestore.instance
+                .collection('facility_bookings')
+                .add(bookingData);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    '${facility['name']} booked successfully for $bookingDate from $startBookingTime to $endBookingTime!'),
+              ),
+            );
+          } catch (e) {
+            print('Error saving booking: $e');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to book the facility'),
+              ),
+            );
+          }
         }
       }
     }
@@ -226,7 +254,8 @@ class FacilityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         title: Text(
           name,
           style: const TextStyle(fontWeight: FontWeight.bold),

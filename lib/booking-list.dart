@@ -313,7 +313,9 @@ class BookingListPage extends StatelessWidget {
                               roomName: booking['roomName'],
                               bookingDate:
                                   _formatTimestamp(booking['timestamp']),
-                              bookingTime: booking['time'] ?? 'Not specified',
+                              startTime:
+                                  booking['startTime'] ?? 'Not specified',
+                              endTime: booking['endTime'] ?? 'Not specified',
                               status: booking['status'] ?? 'UPCOMING',
                               statusColor: _getStatusColor(
                                   booking['status'] ?? 'UPCOMING'),
@@ -392,7 +394,8 @@ class BookingCard extends StatelessWidget {
   final String matricId;
   final String roomName;
   final String bookingDate;
-  final String bookingTime;
+  final String startTime; // Changed
+  final String endTime; // Added
   final String status;
   final Color statusColor;
 
@@ -403,7 +406,8 @@ class BookingCard extends StatelessWidget {
     required this.matricId,
     required this.roomName,
     required this.bookingDate,
-    required this.bookingTime,
+    required this.startTime, // Changed
+    required this.endTime, // Added
     required this.status,
     required this.statusColor,
   });
@@ -492,7 +496,7 @@ class BookingCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  bookingTime,
+                  "$startTime - $endTime",
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],

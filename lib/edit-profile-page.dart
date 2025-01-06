@@ -8,15 +8,23 @@ import 'profile-page.dart';
 class EditProfilePage extends StatefulWidget {
   final String fullName;
   final String matricId;
+  final String email;
+  final String role;
   final String course;
   final String semester;
+  final String department;
+  final String adminCode;
 
   const EditProfilePage({
     super.key,
     required this.fullName,
     required this.matricId,
+    required this.email,
+    required this.role,
     required this.course,
     required this.semester,
+    required this.department,
+    required this.adminCode,
   });
 
   @override
@@ -26,26 +34,33 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController fullNameController;
   late TextEditingController matricIdController;
+  late TextEditingController emailController;
   late TextEditingController courseController;
   late TextEditingController semesterController;
+  late TextEditingController departmentController;
+  late TextEditingController adminCodeController;
 
   @override
   void initState() {
     super.initState();
-    // Initialize the controllers with data passed from the Profile Page
     fullNameController = TextEditingController(text: widget.fullName);
     matricIdController = TextEditingController(text: widget.matricId);
+    emailController = TextEditingController(text: widget.email);
     courseController = TextEditingController(text: widget.course);
     semesterController = TextEditingController(text: widget.semester);
+    departmentController = TextEditingController(text: widget.department);
+    adminCodeController = TextEditingController(text: widget.adminCode);
   }
 
   @override
   void dispose() {
-    // Dispose controllers when no longer needed
     fullNameController.dispose();
     matricIdController.dispose();
+    emailController.dispose();
     courseController.dispose();
     semesterController.dispose();
+    departmentController.dispose();
+    adminCodeController.dispose();
     super.dispose();
   }
 
@@ -120,8 +135,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
             const SizedBox(height: 20),
             ProfileField(label: 'Full Name', controller: fullNameController),
             ProfileField(label: 'Matric ID', controller: matricIdController),
-            ProfileField(label: 'Course', controller: courseController),
-            ProfileField(label: 'Semester', controller: semesterController),
+            ProfileField(label: 'Email', controller: emailController),
+            if (widget.role == 'Student') ...[
+              ProfileField(label: 'Course', controller: courseController),
+              ProfileField(label: 'Semester', controller: semesterController),
+            ],
+            if (widget.role == 'Staff') ...[
+              ProfileField(
+                  label: 'Department', controller: departmentController),
+            ],
+            if (widget.role == 'Admin') ...[
+              ProfileField(
+                  label: 'Admin Code', controller: adminCodeController),
+            ],
             const SizedBox(height: 30),
             // Save Button
             ElevatedButton(
@@ -130,8 +156,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 Navigator.pop(context, {
                   'fullName': fullNameController.text,
                   'matricId': matricIdController.text,
+                  'email': emailController.text,
                   'course': courseController.text,
                   'semester': semesterController.text,
+                  'department': departmentController.text,
+                  'adminCode': adminCodeController.text,
                 });
               },
               style: ElevatedButton.styleFrom(

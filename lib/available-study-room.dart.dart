@@ -12,10 +12,10 @@ class AvailableStudyRoomPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, String>> facilities = [
-      {'name': 'Study Room 1', 'capacity': 'max 8 people'},
-      {'name': 'Study Room 2', 'capacity': 'max 8 people'},
-      {'name': 'Study Room 3', 'capacity': 'max 8 people'},
-      {'name': 'Study Room 4', 'capacity': 'max 8 people'},
+      {'name': 'Study Room 1', 'capacity': '8 people'},
+      {'name': 'Study Room 2', 'capacity': '8 people'},
+      {'name': 'Study Room 3', 'capacity': '8 people'},
+      {'name': 'Study Room 4', 'capacity': '8 people'},
     ];
 
     return Scaffold(
@@ -29,7 +29,7 @@ class AvailableStudyRoomPage extends StatelessWidget {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => NotificationPage()),
+              MaterialPageRoute(builder: (context) => const NotificationPage()),
             );
           },
         ),
@@ -126,25 +126,26 @@ class AvailableStudyRoomPage extends StatelessWidget {
             case 0:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => HomePage()),
+                MaterialPageRoute(builder: (context) => const HomePage()),
               );
               break;
             case 1:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => SearchPage()),
+                MaterialPageRoute(builder: (context) => const SearchPage()),
               );
               break;
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => BookingHistoryPage()),
+                MaterialPageRoute(
+                    builder: (context) => const BookingHistoryPage()),
               );
               break;
             case 3:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
               break;
           }
@@ -153,7 +154,8 @@ class AvailableStudyRoomPage extends StatelessWidget {
     );
   }
 
-  void showDateTimePicker(BuildContext context, Map<String, String> facility) async {
+  void showDateTimePicker(
+      BuildContext context, Map<String, String> facility) async {
     final DateTime? selectedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -162,40 +164,66 @@ class AvailableStudyRoomPage extends StatelessWidget {
     );
 
     if (selectedDate != null) {
-      final TimeOfDay? selectedTime = await showTimePicker(
+      final TimeOfDay? startTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.now(),
       );
 
-      if (selectedTime != null) {
-        final bookingDate = '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
-        final bookingTime = '${selectedTime.format(context)}';
+      if (startTime != null) {
+        final TimeOfDay? endTime = await showTimePicker(
+          context: context,
+          initialTime: startTime,
+        );
 
-        final bookingData = {
-          'roomName': facility['name']!,
-          'capacity': facility['capacity']!,
-          'peopleCount': 4, // Example value, can be modified
-          'status': 'UPCOMING',
-          'date': bookingDate,
-          'time': bookingTime,
-          'timestamp': FieldValue.serverTimestamp(),
-        };
+        if (endTime != null) {
+          // Ensure end time is after start time
+          if (endTime.hour < startTime.hour ||
+              (endTime.hour == startTime.hour &&
+                  endTime.minute <= startTime.minute)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('End time must be after start time'),
+              ),
+            );
+            return;
+          }
 
-        try {
-          await FirebaseFirestore.instance.collection('bookings').add(bookingData);
+          final bookingDate =
+              '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}';
+          final startBookingTime = startTime.format(context);
+          final endBookingTime = endTime.format(context);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${facility['name']} booked successfully for $bookingDate at $bookingTime!'),
-            ),
-          );
-        } catch (e) {
-          print('Error saving booking: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to book the study room'),
-            ),
-          );
+          final bookingData = {
+            'roomName': facility['name']!,
+            'capacity': facility['capacity']!,
+            'peopleCount': 4, // Example value, can be modified
+            'date': bookingDate, // Add this line
+            'status': 'UPCOMING',
+            'startTime': startBookingTime,
+            'endTime': endBookingTime,
+            'timestamp': FieldValue.serverTimestamp(),
+          };
+
+          try {
+            await FirebaseFirestore.instance
+                .collection('bookings')
+                .add(bookingData);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${facility['name']} booked successfully for $bookingDate from $startBookingTime to $endBookingTime!',
+                ),
+              ),
+            );
+          } catch (e) {
+            print('Error saving booking: $e');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to book the study room'),
+              ),
+            );
+          }
         }
       }
     }
@@ -222,7 +250,8 @@ class FacilityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         title: Text(
           name,
           style: const TextStyle(fontWeight: FontWeight.bold),

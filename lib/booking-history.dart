@@ -97,14 +97,15 @@ class BookingHistoryPage extends StatelessWidget {
                           final data = doc.data() as Map<String, dynamic>;
                           allBookings.add(
                             BookingItem(
-                              id: doc.id, // Add the document ID
+                              id: doc.id,
                               name: data['roomName'] ?? 'Unknown Room',
                               type: 'Study Room',
                               peopleCount: data['peopleCount'] ?? 0,
                               status: data['status'] ?? 'UPCOMING',
                               timestamp: data['timestamp'] as Timestamp,
                               date: data['date'] ?? 'Unknown Date',
-                              time: data['time'] ?? 'Unknown Time',
+                              startTime: data['startTime'] ?? 'Unknown Time',
+                              endTime: data['endTime'] ?? 'Unknown Time',
                             ),
                           );
                         }
@@ -115,14 +116,15 @@ class BookingHistoryPage extends StatelessWidget {
                           final data = doc.data() as Map<String, dynamic>;
                           allBookings.add(
                             BookingItem(
-                              id: doc.id, // Add the document ID
+                              id: doc.id,
                               name: data['facilityName'] ?? 'Unknown Facility',
                               type: 'Facility',
                               peopleCount: data['peopleCount'] ?? 0,
                               status: data['status'] ?? 'UPCOMING',
                               timestamp: data['timestamp'] as Timestamp,
                               date: data['date'] ?? 'Unknown Date',
-                              time: data['time'] ?? 'Unknown Time',
+                              startTime: data['startTime'] ?? 'Unknown Time',
+                              endTime: data['endTime'] ?? 'Unknown Time',
                             ),
                           );
                         }
@@ -143,7 +145,7 @@ class BookingHistoryPage extends StatelessWidget {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 15.0),
                             child: BookingCard(
-                              bookingId: booking.id, // Pass the booking ID
+                              bookingId: booking.id,
                               name: booking.name,
                               type: booking.type,
                               peopleCount: booking.peopleCount,
@@ -153,7 +155,8 @@ class BookingHistoryPage extends StatelessWidget {
                                   : Colors.black,
                               details: BookingDetails(
                                 date: booking.date,
-                                time: booking.time,
+                                startTime: booking.startTime,
+                                endTime: booking.endTime,
                               ),
                             ),
                           );
@@ -225,16 +228,16 @@ class BookingHistoryPage extends StatelessWidget {
   }
 }
 
-// Data class to hold booking information
 class BookingItem {
-  final String id; // Added ID field for Firebase document ID
+  final String id;
   final String name;
   final String type;
   final int peopleCount;
   final String status;
   final Timestamp timestamp;
   final String date;
-  final String time;
+  final String startTime;
+  final String endTime;
 
   BookingItem({
     required this.id,
@@ -244,12 +247,13 @@ class BookingItem {
     required this.status,
     required this.timestamp,
     required this.date,
-    required this.time,
+    required this.startTime,
+    required this.endTime,
   });
 }
 
 class BookingCard extends StatelessWidget {
-  final String bookingId; // New booking ID field
+  final String bookingId;
   final String name;
   final String type;
   final int peopleCount;
@@ -259,7 +263,7 @@ class BookingCard extends StatelessWidget {
 
   const BookingCard({
     super.key,
-    required this.bookingId, // Initialize bookingId
+    required this.bookingId,
     required this.name,
     required this.type,
     required this.peopleCount,
@@ -268,7 +272,6 @@ class BookingCard extends StatelessWidget {
     this.details,
   });
 
-  // Function to delete the booking
   Future<void> _deleteBooking(BuildContext context) async {
     try {
       await FirebaseFirestore.instance
@@ -371,7 +374,14 @@ class BookingCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Time: ${details!.time}',
+                        'Start Time: ${details!.startTime}',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 14.0,
+                        ),
+                      ),
+                      Text(
+                        'End Time: ${details!.endTime}',
                         style: const TextStyle(
                           color: Colors.black,
                           fontSize: 14.0,
@@ -399,7 +409,12 @@ class BookingCard extends StatelessWidget {
 
 class BookingDetails {
   final String date;
-  final String time;
+  final String startTime;
+  final String endTime;
 
-  BookingDetails({required this.date, required this.time});
+  BookingDetails({
+    required this.date,
+    required this.startTime,
+    required this.endTime,
+  });
 }

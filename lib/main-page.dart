@@ -2,7 +2,6 @@ import 'package:easybook/facility-list.dart';
 import 'package:easybook/profile-list.dart';
 import 'package:flutter/material.dart';
 import 'booking-list.dart';
-import 'payment-list.dart';
 import 'room-list.dart';
 import 'search-page.dart';
 import 'booking-history.dart';
@@ -153,16 +152,6 @@ class HomePage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) => const FacilityListPage()),
-                );
-              },
-            ),
-            MenuButton(
-              title: 'PAYMENT LIST',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const PaymentListPage()),
                 );
               },
             ),
