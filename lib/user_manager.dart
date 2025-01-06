@@ -28,6 +28,7 @@ class UserManager {
     required String email,
     required String password,
     required String role,
+    Map<String, dynamic>? additionalInfo, // Added parameter
   }) async {
     try {
       UserCredential userCredential =
@@ -36,24 +37,31 @@ class UserManager {
         password: password,
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
+      // Create user data
+      final userData = {
         'uid': userCredential.user!.uid,
         'name': name,
         'matricID': matricID,
         'email': email,
         'role': role,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+        if (additionalInfo != null) ...additionalInfo, // Merge additionalInfo
+      };
 
+      // Save to Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set(userData);
+
+      // Update local user model
       _currentUser = AppUser(
         id: userCredential.user!.uid,
         name: name,
         matricID: matricID,
         email: email,
         role: role,
+        additionalInfo: additionalInfo,
       );
 
       await _saveCurrentUser();
@@ -104,12 +112,11 @@ class UserManager {
   }
 
   /// Update the current user's profile in Firestore and locally.
-  static Future<void> updateUserProfile(
-    String matricId, {
+  static Future<void> updateUserProfile(String matricId, {
     required String name,
     String? course,
     String? semester,
-    required String matricID,
+    Map<String, dynamic>? additionalInfo,
   }) async {
     if (_currentUser == null) {
       print('No user is logged in.');
@@ -119,16 +126,22 @@ class UserManager {
     try {
       final userDoc =
           FirebaseFirestore.instance.collection('users').doc(_currentUser!.id);
-      await userDoc.update({
+
+      // Prepare updated data
+      final updatedData = {
         'name': name,
         if (course != null) 'course': course,
         if (semester != null) 'semester': semester,
-      });
+        if (additionalInfo != null) ...additionalInfo,
+      };
+
+      await userDoc.update(updatedData);
 
       _currentUser = _currentUser!.copyWith(
         name: name,
         course: course,
         semester: semester,
+        additionalInfo: additionalInfo,
       );
 
       await _saveCurrentUser();

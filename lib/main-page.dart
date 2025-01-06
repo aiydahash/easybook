@@ -92,7 +92,10 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 20),
             const Text(
               'Welcome to UMPSA Library, Pekan!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 1, 10, 61)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 15),
@@ -117,37 +120,34 @@ class HomePage extends StatelessWidget {
               },
             ),
             MenuButton(
-              title: 'USER LIST', 
+              title: 'USER LIST',
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (context) => UserListPage()),
+                  MaterialPageRoute(builder: (context) => UserListPage()),
                 );
               },
             ),
             MenuButton(
-              title: 'BOOKING LIST', 
+              title: 'BOOKING LIST',
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (context) => BookingListPage()),
+                  MaterialPageRoute(builder: (context) => BookingListPage()),
                 );
               },
             ),
             MenuButton(
-              title: 'ROOM LIST', 
+              title: 'ROOM LIST',
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (context) => RoomListPage()),
+                  MaterialPageRoute(builder: (context) => RoomListPage()),
                 );
               },
             ),
             MenuButton(
-              title: 'FACILITY LIST', 
+              title: 'FACILITY LIST',
               onPressed: () {
                 Navigator.push(
                   context,
@@ -157,7 +157,7 @@ class HomePage extends StatelessWidget {
               },
             ),
             MenuButton(
-              title: 'PAYMENT LIST', 
+              title: 'PAYMENT LIST',
               onPressed: () {
                 Navigator.push(
                   context,
@@ -209,7 +209,8 @@ class HomePage extends StatelessWidget {
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BookingHistoryPage()),
+                MaterialPageRoute(
+                    builder: (context) => const BookingHistoryPage()),
               );
               break;
             case 3:

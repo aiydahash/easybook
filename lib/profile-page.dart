@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'edit-profile-page.dart';
-import 'main-page.dart';
-import 'main.dart';
 import 'notification-page.dart';
 import 'search-page.dart';
 import 'booking-history.dart';
+import 'main.dart';
 import 'user_manager.dart';
+import 'main-page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,10 +15,17 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  // Common fields
   late String fullName = '';
   late String matricId = '';
+  late String email = '';
+  late String role = '';
+  
+  // Role-specific fields
   late String course = '';
   late String semester = '';
+  late String department = '';
+  late String adminCode = '';
 
   @override
   void initState() {
@@ -30,10 +37,25 @@ class _ProfilePageState extends State<ProfilePage> {
     final currentUser = UserManager.getCurrentUser();
     if (currentUser != null) {
       setState(() {
+        // Common fields
         fullName = currentUser.name;
         matricId = currentUser.matricID;
-        course = currentUser.course ?? "Not set";
-        semester = currentUser.semester ?? "Not set";
+        email = currentUser.email;
+        role = currentUser.role;
+
+        // Role-specific fields
+        switch (role) {
+          case 'Student':
+            course = currentUser.additionalInfo?['course'] ?? "Not set";
+            semester = currentUser.additionalInfo?['semester'] ?? "Not set";
+            break;
+          case 'Staff':
+            department = currentUser.additionalInfo?['department'] ?? "Not set";
+            break;
+          case 'Admin':
+            adminCode = currentUser.additionalInfo?['adminCode'] ?? "Not set";
+            break;
+        }
       });
     }
   }
@@ -42,26 +64,45 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() {
       fullName = updatedData['fullName'] ?? fullName;
       matricId = updatedData['matricId'] ?? matricId;
-      course = updatedData['course'] ?? course;
-      semester = updatedData['semester'] ?? semester;
+      email = updatedData['email'] ?? email;
+
+      // Update role-specific fields
+      switch (role) {
+        case 'Student':
+          course = updatedData['course'] ?? course;
+          semester = updatedData['semester'] ?? semester;
+          break;
+        case 'Staff':
+          department = updatedData['department'] ?? department;
+          break;
+        case 'Admin':
+          adminCode = updatedData['adminCode'] ?? adminCode;
+          break;
+      }
     });
 
     await UserManager.updateUserProfile(
       matricId,
       name: fullName,
-      course: course,
-      semester: semester,
-      matricID: '',
+      email: email,
+      additionalInfo: {
+        'course': course,
+        'semester': semester,
+        'department': department,
+        'adminCode': adminCode,
+      },
     );
   }
 
   void _handleLogout() async {
     await UserManager.logout();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
-    );
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -116,87 +157,106 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       backgroundColor: const Color(0xFF010A3D),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 20),
-            const Text(
-              'Student Profile',
-              style: TextStyle(
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.white,
-              child: Icon(
-                Icons.person,
-                size: 60.0,
-                color: Color(0xFF010A3D),
-              ),
-            ),
-            const SizedBox(height: 30),
-            ProfileDetail(label: 'Full Name', value: fullName),
-            ProfileDetail(label: 'Matric ID', value: matricId),
-            ProfileDetail(label: 'Course', value: course),
-            ProfileDetail(label: 'Semester', value: semester),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: () async {
-                final updatedData = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditProfilePage(
-                      fullName: fullName,
-                      matricId: matricId,
-                      course: course,
-                      semester: semester,
-                    ),
-                  ),
-                );
-                if (updatedData != null) {
-                  _updateProfile(updatedData);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-              ),
-              child: const Text(
-                "Edit",
-                style: TextStyle(
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF010A3D),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _handleLogout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-              ),
-              child: const Text(
-                "Logout",
-                style: TextStyle(
-                  fontSize: 16.0,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              Text(
+                '$role Profile',
+                style: const TextStyle(
+                  fontSize: 20.0,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              const CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.white,
+                child: Icon(
+                  Icons.person,
+                  size: 60.0,
+                  color: Color(0xFF010A3D),
+                ),
+              ),
+              const SizedBox(height: 30),
+              
+              // Common fields for all roles
+              ProfileDetail(label: 'Full Name', value: fullName),
+              ProfileDetail(label: 'Matric ID', value: matricId),
+              ProfileDetail(label: 'Email', value: email),
+              ProfileDetail(label: 'Role', value: role),
+
+              // Role-specific fields
+              if (role == 'Student') ...[
+                ProfileDetail(label: 'Course', value: course),
+                ProfileDetail(label: 'Semester', value: semester),
+              ] else if (role == 'Staff') ...[
+                ProfileDetail(label: 'Department', value: department),
+              ] else if (role == 'Admin') ...[
+                ProfileDetail(label: 'Admin Code', value: adminCode),
+              ],
+
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () async {
+                  final updatedData = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProfilePage(
+                        fullName: fullName,
+                        matricId: matricId,
+                        email: email,
+                        role: role,
+                        course: course,
+                        semester: semester,
+                        department: department,
+                        adminCode: adminCode,
+                      ),
+                    ),
+                  );
+                  if (updatedData != null) {
+                    _updateProfile(updatedData);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                  ),
+                ),
+                child: const Text(
+                  "Edit Profile",
+                  style: TextStyle(
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF010A3D),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _handleLogout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                  ),
+                ),
+                child: const Text(
+                  "Logout",
+                  style: TextStyle(
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -239,7 +299,9 @@ class _ProfilePageState extends State<ProfilePage> {
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BookingHistoryPage()),
+                MaterialPageRoute(
+                  builder: (context) => const BookingHistoryPage(),
+                ),
               );
               break;
             case 3:

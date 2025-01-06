@@ -6,6 +6,7 @@ class AppUser {
   final String role;
   final String? course;
   final String? semester;
+  final Map<String, dynamic>? additionalInfo; // Add this field
 
   AppUser({
     required this.id,
@@ -15,46 +16,53 @@ class AppUser {
     required this.role,
     this.course,
     this.semester,
+    this.additionalInfo, // Initialize additionalInfo
   });
 
-  factory AppUser.fromMap(Map<String, dynamic> data) {
+  // Factory constructor to create an AppUser from a Map
+  factory AppUser.fromMap(Map<String, dynamic> map) {
     return AppUser(
-      id: data['id'] ?? data['uid'] ?? '',
-      name: data['name'] ?? '',
-      matricID: data['matricID'] ?? '',
-      email: data['email'] ?? '',
-      role: data['role'] ?? '',
-      course: data['course'],
-      semester: data['semester'],
+      id: map['uid'] ?? '',
+      name: map['name'] ?? '',
+      matricID: map['matricID'] ?? '',
+      email: map['email'] ?? '',
+      role: map['role'] ?? '',
+      course: map['course'],
+      semester: map['semester'],
+      additionalInfo: map['additionalInfo'], // Parse additionalInfo
     );
   }
 
+  // Convert AppUser to a Map for serialization
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      'uid': id,
       'name': name,
       'matricID': matricID,
       'email': email,
       'role': role,
       'course': course,
       'semester': semester,
+      'additionalInfo': additionalInfo, // Add additionalInfo
     };
   }
 
+  // Method to create a copy of AppUser with updated fields
   AppUser copyWith({
     String? name,
-    String? matricID,
     String? course,
     String? semester,
+    Map<String, dynamic>? additionalInfo,
   }) {
     return AppUser(
       id: id,
       name: name ?? this.name,
-      matricID: matricID ?? this.matricID,
+      matricID: matricID,
       email: email,
       role: role,
       course: course ?? this.course,
       semester: semester ?? this.semester,
+      additionalInfo: additionalInfo ?? this.additionalInfo,
     );
   }
 }

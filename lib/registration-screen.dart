@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'profile-page.dart';
 import 'user_manager.dart';
+
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
 
@@ -16,6 +17,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
+  // Role-specific fields
+  final TextEditingController _adminCodeController = TextEditingController();
+  final TextEditingController _staffDepartmentController =
+      TextEditingController();
+  final TextEditingController _studentCourseController = TextEditingController();
+
   String _selectedRole = 'Student'; // Default role
   bool _isLoading = false; // Track loading state
 
@@ -23,36 +30,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-        title: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(width: 8),
-            Text(
-              'Easy',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontStyle: FontStyle.italic,
-                fontSize: 18,
-              ),
-            ),
-            Text(
-              'Book',
-              style: TextStyle(
-                color: Colors.white,
-                fontStyle: FontStyle.italic,
-                fontSize: 18,
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(
               Icons.arrow_circle_left_outlined,
-              color: Colors.white,
+              color: Color.fromARGB(255, 1, 10, 61),
             ),
             onPressed: () {
               Navigator.pop(context);
@@ -130,6 +113,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   });
                 },
               ),
+              const SizedBox(height: 20),
+              // Role-Specific Fields
+              _buildRoleSpecificFields(),
               const SizedBox(height: 30),
               // Register Button
               SizedBox(
@@ -179,6 +165,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
+  Widget _buildRoleSpecificFields() {
+    if (_selectedRole == 'Admin') {
+      return _buildTextField(
+        controller: _adminCodeController,
+        label: 'Admin Code',
+      );
+    } else if (_selectedRole == 'Staff') {
+      return _buildTextField(
+        controller: _staffDepartmentController,
+        label: 'Department',
+      );
+    } else if (_selectedRole == 'Student') {
+      return _buildTextField(
+        controller: _studentCourseController,
+        label: 'Course of Study',
+      );
+    }
+    return const SizedBox.shrink(); // Return an empty widget if no role-specific field
+  }
+
   Future<void> _handleRegistration() async {
     if (_nameController.text.isEmpty ||
         _matricIDController.text.isEmpty ||
@@ -194,6 +200,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
+    // Add validation for role-specific fields
+    if (_selectedRole == 'Admin' && _adminCodeController.text.isEmpty) {
+      showSnackbar(context, 'Please enter Admin Code!');
+      return;
+    } else if (_selectedRole == 'Staff' &&
+        _staffDepartmentController.text.isEmpty) {
+      showSnackbar(context, 'Please enter Department!');
+      return;
+    } else if (_selectedRole == 'Student' &&
+        _studentCourseController.text.isEmpty) {
+      showSnackbar(context, 'Please enter Course of Study!');
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final success = await UserManager.registerUser(
@@ -202,6 +222,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         email: _emailController.text,
         password: _passwordController.text,
         role: _selectedRole,
+        additionalInfo: {
+          'adminCode': _adminCodeController.text,
+          'department': _staffDepartmentController.text,
+          'course': _studentCourseController.text,
+        },
       );
 
       if (success) {
