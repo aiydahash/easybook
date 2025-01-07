@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'main-page.dart';
-import 'booking-history.dart';
+import '../main-page.dart';
+import 'booking/booking-history.dart';
 import 'notification-page.dart';
-import 'profile-page.dart';
+import 'registration/profile-page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'main-page.dart';
-import 'notification-page.dart';
-import 'search-page.dart';
-import 'booking-history.dart';
+import '../../main-page.dart';
+import '../notification-page.dart';
+import '../search-page.dart';
+import '../booking/booking-history.dart';
 import 'profile-page.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -168,7 +168,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 30.0, vertical: 15.0),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
+                  borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
               child: const Text(

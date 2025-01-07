@@ -1,40 +1,15 @@
 import 'package:flutter/material.dart';
-import 'main-page.dart';
-import 'notification-page.dart';
-import 'profile-page.dart';
-import 'search-page.dart';
-import 'booking-history.dart';
-import 'user_manager.dart';
-import 'user_model.dart';
+import '../notification-page.dart';
+import '../../main-page.dart';
+import '../registration/profile-page.dart';
+import '../search-page.dart';
+import '../booking/booking-history.dart';
 
-class UserListPage extends StatefulWidget {
-  const UserListPage({super.key});
-
-  @override
-  State<UserListPage> createState() => _UserListPageState();
-}
-
-class _UserListPageState extends State<UserListPage> {
-  List<AppUser> users = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchUsers();
-  }
-
-  Future<void> _fetchUsers() async {
-    final fetchedUsers = await UserManager.getUsers();
-    setState(() {
-      users = fetchedUsers;
-    });
-  }
+class PaymentListPage extends StatelessWidget {
+  const PaymentListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final students = users.where((user) => user.role == 'Student').toList();
-    final staff = users.where((user) => user.role == 'Staff').toList();
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
@@ -80,59 +55,50 @@ class _UserListPageState extends State<UserListPage> {
               Icons.arrow_circle_left_outlined,
               color: Colors.white,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+            },
           ),
         ],
       ),
-      backgroundColor: const Color(0xFF010A3D),
-      body: Padding(
+      backgroundColor: Colors.white,
+      body: ListView(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Students',
+        children: const [
+          const Padding(
+            padding:
+                EdgeInsets.only(bottom: 20.0), // Adds 20 pixels of space below
+            child: Text(
+              'Payment List',
               style: TextStyle(
-                color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Color(0xFF020B45),
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView(
-                children: [
-                  ...students.map((user) => UserCard(
-                        name: user.name,
-                        role: user.role,
-                        icon: Icons.person,
-                      )),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Staff',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ...staff.map((user) => UserCard(
-                        name: user.name,
-                        role: user.role,
-                        icon: Icons.person_outline,
-                      )),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+          PaymentCard(
+            roomName: "Auditorium",
+            people: "200 people",
+            status: "PAST",
+            paymentStatus: "PAID",
+            statusColor: Colors.yellow,
+          ),
+          PaymentCard(
+            roomName: "Computer Lab",
+            people: "60 people",
+            status: "UPCOMING",
+            paymentStatus: "PAID",
+            statusColor: Colors.blue,
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -175,7 +141,7 @@ class _UserListPageState extends State<UserListPage> {
             case 3:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ProfilePage()),
+                MaterialPageRoute(builder: (context) => ProfilePage()),
               );
               break;
           }
@@ -185,54 +151,78 @@ class _UserListPageState extends State<UserListPage> {
   }
 }
 
-class UserCard extends StatelessWidget {
-  final String name;
-  final String role;
-  final IconData icon;
+class PaymentCard extends StatelessWidget {
+  final String roomName;
+  final String people;
+  final String status;
+  final String paymentStatus;
+  final Color statusColor;
 
-  const UserCard({
+  const PaymentCard({
     super.key,
-    required this.name,
-    required this.role,
-    required this.icon,
+    required this.roomName,
+    required this.people,
+    required this.status,
+    required this.paymentStatus,
+    required this.statusColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      color: Colors.white,
+      color: const Color(0xFF020B45),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),
       ),
+      margin: const EdgeInsets.only(bottom: 15),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-          child: Icon(icon, color: Colors.white),
-        ),
         title: Text(
-          name,
+          roomName,
           style: const TextStyle(
-            color: Color.fromARGB(255, 1, 10, 61),
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),
         subtitle: Text(
-          role,
-          style: const TextStyle(
-            color: Color.fromARGB(255, 1, 10, 61),
-            fontSize: 14,
-          ),
+          people,
+          style: const TextStyle(color: Colors.white70),
         ),
-        trailing: IconButton(
-          icon: const Icon(
-            Icons.arrow_forward_ios,
-            color: Color.fromARGB(255, 1, 10, 61),
-          ),
-          onPressed: () {
-            // Navigate to profile details page
-          },
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: statusColor,
+                borderRadius: BorderRadius.circular(15.0),
+              ),
+              child: Text(
+                status,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.greenAccent,
+                borderRadius: BorderRadius.circular(15.0),
+              ),
+              child: Text(
+                paymentStatus,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

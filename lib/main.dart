@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'registration-screen.dart';
+import 'screens/registration/registration-screen.dart';
 import 'main-page.dart';
-import 'user_manager.dart';
+import 'providers/user_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding

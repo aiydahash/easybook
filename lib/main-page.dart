@@ -1,14 +1,16 @@
-import 'package:easybook/facility-list.dart';
-import 'package:easybook/profile-list.dart';
+import 'package:easybook/screens/booking_facility/facility-list.dart';
+import 'package:easybook/screens/registration/profile-list.dart';
 import 'package:flutter/material.dart';
-import 'booking-list.dart';
-import 'room-list.dart';
-import 'search-page.dart';
-import 'booking-history.dart';
-import 'profile-page.dart';
-import 'available-facility.dart';
-import 'notification-page.dart';
-import 'available-study-room.dart.dart';
+import 'screens/booking/booking-list.dart';
+import 'screens/booking_room/room-list.dart';
+import 'screens/search-page.dart';
+import 'screens/booking/booking-history.dart';
+import 'screens/registration/profile-page.dart';
+import 'screens/booking_facility/available-facility.dart';
+import 'screens/notification-page.dart';
+import 'screens/booking_room/available-study-room.dart.dart';
+import 'screens/payment/payment-list.dart';
+import 'providers/user_manager.dart';
 
 void main() {
   runApp(MyApp());
@@ -33,6 +35,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userRole = UserManager.currentUserRole;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
@@ -98,63 +101,83 @@ class HomePage extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 15),
-            MenuButton(
-              title: 'BOOK STUDY ROOM',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AvailableStudyRoomPage()),
-                );
-              },
-            ),
-            MenuButton(
-              title: 'BOOK FACILITY',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AvailableFacilityPage()),
-                );
-              },
-            ),
-            MenuButton(
-              title: 'USER LIST',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => UserListPage()),
-                );
-              },
-            ),
-            MenuButton(
-              title: 'BOOKING LIST',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => BookingListPage()),
-                );
-              },
-            ),
-            MenuButton(
-              title: 'ROOM LIST',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => RoomListPage()),
-                );
-              },
-            ),
-            MenuButton(
-              title: 'FACILITY LIST',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const FacilityListPage()),
-                );
-              },
-            ),
+            if (userRole == 'Student' || userRole == 'Staff') ...[
+              MenuButton(
+                title: 'BOOK STUDY ROOM',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AvailableStudyRoomPage(),
+                    ),
+                  );
+                },
+              ),
+              MenuButton(
+                title: 'BOOK FACILITY',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AvailableFacilityPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+
+            // Show these buttons only to Admin
+            if (userRole == 'Admin') ...[
+              MenuButton(
+                title: 'USER LIST',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => UserListPage()),
+                  );
+                },
+              ),
+              MenuButton(
+                title: 'BOOKING LIST',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => BookingListPage()),
+                  );
+                },
+              ),
+              MenuButton(
+                title: 'ROOM LIST',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => RoomListPage()),
+                  );
+                },
+              ),
+              MenuButton(
+                title: 'FACILITY LIST',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FacilityListPage(),
+                    ),
+                  );
+                },
+              ),
+              MenuButton(
+                title: 'PAYMENT LIST',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentListPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),

@@ -1,11 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'search-page.dart';
-import 'booking-history.dart';
-import 'profile-page.dart';
-import 'main-page.dart';
+import 'booking/booking-history.dart';
+import 'registration/profile-page.dart';
+import '../main-page.dart';
 
-class NotificationPage extends StatelessWidget {
+class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
+
+  @override
+  State<NotificationPage> createState() => _NotificationPageState();
+}
+
+class _NotificationPageState extends State<NotificationPage> {
+  late Stream<List<BookingNotification>> _notificationsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationsStream = _getNotifications();
+  }
+
+  Stream<List<BookingNotification>> _getNotifications() {
+    // Combine both room and facility bookings
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('status', isEqualTo: 'UPCOMING')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .asyncMap((bookingsSnapshot) async {
+      final List<BookingNotification> notifications = [];
+
+      // Process room bookings
+      for (var doc in bookingsSnapshot.docs) {
+        final data = doc.data();
+        // Check if the booking is within 24 hours
+        final bookingDate = DateTime.parse(data['date']);
+        final now = DateTime.now();
+        if (bookingDate.difference(now).inHours <= 24) {
+          notifications.add(
+            BookingNotification(
+              roomName: data['roomName'] ?? 'Unknown Room',
+              numberOfPeople: data['peopleCount'] ?? 0,
+              date: data['date'] ?? 'Unknown Date',
+              time: '${data['startTime']} - ${data['endTime']}',
+              status: data['status'] ?? 'UPCOMING',
+            ),
+          );
+        }
+      }
+
+      // Also fetch facility bookings
+      final facilitySnapshot = await FirebaseFirestore.instance
+          .collection('facility_bookings')
+          .where('status', isEqualTo: 'UPCOMING')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      for (var doc in facilitySnapshot.docs) {
+        final data = doc.data();
+        // Check if the booking is within 24 hours
+        final bookingDate = DateTime.parse(data['date']);
+        final now = DateTime.now();
+        if (bookingDate.difference(now).inHours <= 24) {
+          notifications.add(
+            BookingNotification(
+              roomName: data['facilityName'] ?? 'Unknown Facility',
+              numberOfPeople: data['peopleCount'] ?? 0,
+              date: data['date'] ?? 'Unknown Date',
+              time: '${data['startTime']} - ${data['endTime']}',
+              status: data['status'] ?? 'UPCOMING',
+            ),
+          );
+        }
+      }
+
+      return notifications;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,26 +133,68 @@ class NotificationPage extends StatelessWidget {
         ],
       ),
       backgroundColor: const Color(0xFF010A3D),
-      body: const Padding(
-        padding: EdgeInsets.all(16.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Notification',
+            const Text(
+              'Notifications',
               style: TextStyle(
                 fontSize: 20.0,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 20),
-            NotificationCard(
-              roomName: "Study Room 2",
-              numberOfPeople: 4,
-              date: "03/06/2024",
-              time: "10:00 A.M. - 11:00 A.M.",
-              status: "UPCOMING",
+            const SizedBox(height: 20),
+            Expanded(
+              child: StreamBuilder<List<BookingNotification>>(
+                stream: _notificationsStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading notifications: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    );
+                  }
+
+                  final notifications = snapshot.data ?? [];
+
+                  if (notifications.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No upcoming bookings',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: notifications.length,
+                    itemBuilder: (context, index) {
+                      final notification = notifications[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: NotificationCard(
+                          roomName: notification.roomName,
+                          numberOfPeople: notification.numberOfPeople,
+                          date: notification.date,
+                          time: notification.time,
+                          status: notification.status,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -89,7 +203,7 @@ class NotificationPage extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         selectedItemColor: Colors.yellow,
         unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -141,6 +255,22 @@ class NotificationPage extends StatelessWidget {
   }
 }
 
+class BookingNotification {
+  final String roomName;
+  final int numberOfPeople;
+  final String date;
+  final String time;
+  final String status;
+
+  BookingNotification({
+    required this.roomName,
+    required this.numberOfPeople,
+    required this.date,
+    required this.time,
+    required this.status,
+  });
+}
+
 class NotificationCard extends StatelessWidget {
   final String roomName;
   final int numberOfPeople;
@@ -149,7 +279,7 @@ class NotificationCard extends StatelessWidget {
   final String status;
 
   const NotificationCard({
-    super.key, 
+    super.key,
     required this.roomName,
     required this.numberOfPeople,
     required this.date,
@@ -185,8 +315,8 @@ class NotificationCard extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8.0),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0, vertical: 4.0),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
                   child: Text(
                     status,
                     style: const TextStyle(
@@ -208,7 +338,7 @@ class NotificationCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Container(
-              color:Colors.white,
+              color: Colors.white,
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,7 +348,7 @@ class NotificationCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14.0,
                       fontWeight: FontWeight.bold,
-                      color:Color(0xFF102A68),
+                      color: Color(0xFF102A68),
                     ),
                   ),
                   const SizedBox(height: 5),

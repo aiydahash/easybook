@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'booking-history.dart';
-import 'main-page.dart';
-import 'notification-page.dart';
-import 'profile-page.dart';
+import '../booking/booking-history.dart';
+import '../../main-page.dart';
+import '../notification-page.dart';
+import '../registration/profile-page.dart';
 import 'room-detail.dart';
-import 'search-page.dart';
+import '../search-page.dart';
 
 class RoomListPage extends StatefulWidget {
   const RoomListPage({super.key});

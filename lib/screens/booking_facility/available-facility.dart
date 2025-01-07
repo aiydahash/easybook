@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'main-page.dart';
-import 'search-page.dart';
-import 'booking-history.dart';
-import 'profile-page.dart';
-import 'notification-page.dart';
+import '../../main-page.dart';
+import '../search-page.dart';
+import '../booking/booking-history.dart';
+import '../registration/profile-page.dart';
+import '../notification-page.dart';
 
 class AvailableFacilityPage extends StatelessWidget {
   const AvailableFacilityPage({super.key});

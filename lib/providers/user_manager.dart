@@ -3,11 +3,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'user_model.dart';
+import '../domain/user_model.dart';
 
 class UserManager {
   static const String _currentUserKey = 'currentUser';
   static AppUser? _currentUser;
+  
+  // Add a getter for current user role
+  static String get currentUserRole => _currentUser?.role ?? '';
+  
+  // Add role-based access control methods
+  static bool canAccessBookingFeatures() {
+    return _currentUser?.role == 'Student' || _currentUser?.role == 'Staff';
+  }
+  
+  static bool canAccessAdminFeatures() {
+    return _currentUser?.role == 'Admin';
+  }
 
   /// Initialize the UserManager by loading the current user from local storage.
   static Future<void> initialize() async {
@@ -21,23 +33,26 @@ class UserManager {
   }
 
   // User Registration
-  /// Register a new user with Firebase Authentication and Firestore.
   static Future<bool> registerUser({
     required String name,
     required String matricID,
     required String email,
     required String password,
     required String role,
-    Map<String, dynamic>? additionalInfo, // Added parameter
+    Map<String, dynamic>? additionalInfo,
   }) async {
     try {
+      // Validate role
+      if (!['Admin', 'Staff', 'Student'].contains(role)) {
+        throw Exception('Invalid role specified');
+      }
+
       UserCredential userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Create user data
       final userData = {
         'uid': userCredential.user!.uid,
         'name': name,
@@ -45,16 +60,14 @@ class UserManager {
         'email': email,
         'role': role,
         'createdAt': FieldValue.serverTimestamp(),
-        if (additionalInfo != null) ...additionalInfo, // Merge additionalInfo
+        if (additionalInfo != null) ...additionalInfo,
       };
 
-      // Save to Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set(userData);
 
-      // Update local user model
       _currentUser = AppUser(
         id: userCredential.user!.uid,
         name: name,
@@ -68,16 +81,20 @@ class UserManager {
       return true;
     } catch (e) {
       debugPrint('Error registering user: $e');
-      rethrow; // Let the calling method handle the error
+      rethrow;
     }
   }
 
-  // User Authentication
-
-  /// Login a user using Firebase Authentication
+  // Enhanced User Authentication
   static Future<bool> loginUser(
       String matricID, String password, String selectedRole) async {
     try {
+      // Validate role
+      if (!['Admin', 'Staff', 'Student'].contains(selectedRole)) {
+        print('Invalid role selected');
+        return false;
+      }
+
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('matricID', isEqualTo: matricID)
@@ -86,14 +103,23 @@ class UserManager {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        print('User not found');
+        print('User not found or invalid role');
         return false;
       }
 
-      var userData = querySnapshot.docs.first;
+      var userData = querySnapshot.docs.first.data() as Map<String, dynamic>;
+      
+      // Additional role validation
+      if (userData['role'] != selectedRole) {
+        print('Role mismatch');
+        return false;
+      }
 
-      _currentUser = AppUser.fromMap(userData.data() as Map<String, dynamic>);
+      _currentUser = AppUser.fromMap(userData);
       await _saveCurrentUser();
+      
+      // Print debug information
+      print('Login successful. User role: ${_currentUser?.role}');
       return true;
     } catch (e) {
       print('Error logging in user: $e');
@@ -101,17 +127,21 @@ class UserManager {
     }
   }
 
-  // User Management
-
-  /// Logout the current user.
+  // Enhanced Logout
   static Future<void> logout() async {
-    _currentUser = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_currentUserKey);
-    await FirebaseAuth.instance.signOut();
+    try {
+      _currentUser = null;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_currentUserKey);
+      await FirebaseAuth.instance.signOut();
+      print('Logout successful');
+    } catch (e) {
+      print('Error during logout: $e');
+      rethrow;
+    }
   }
 
-  /// Update the current user's profile in Firestore and locally.
+  // Rest of the methods remain the same...
   static Future<void> updateUserProfile(String matricId, {
     required String name,
     String? course,
@@ -127,7 +157,6 @@ class UserManager {
       final userDoc =
           FirebaseFirestore.instance.collection('users').doc(_currentUser!.id);
 
-      // Prepare updated data
       final updatedData = {
         'name': name,
         if (course != null) 'course': course,
@@ -150,14 +179,10 @@ class UserManager {
     }
   }
 
-  // User Retrieval
-
-  /// Get the currently logged-in user.
   static AppUser? getCurrentUser() {
     return _currentUser;
   }
 
-  /// Fetch all users
   static Future<List<AppUser>> getUsers() async {
     try {
       final querySnapshot =
@@ -171,9 +196,6 @@ class UserManager {
     }
   }
 
-  // Local Storage Operations
-
-  /// Save the current user's data locally using SharedPreferences.
   static Future<void> _saveCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     if (_currentUser != null) {

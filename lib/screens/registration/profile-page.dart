@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'edit-profile-page.dart';
-import 'notification-page.dart';
-import 'search-page.dart';
-import 'booking-history.dart';
-import 'main.dart';
-import 'user_manager.dart';
-import 'main-page.dart';
+import '../notification-page.dart';
+import '../search-page.dart';
+import '../booking/booking-history.dart';
+import '../../main.dart';
+import '../../providers/user_manager.dart';
+import '../../main-page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});

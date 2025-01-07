@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'profile-page.dart';
-import 'user_manager.dart';
+import '../../providers/user_manager.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
