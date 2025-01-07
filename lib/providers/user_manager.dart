@@ -18,7 +18,7 @@ class UserManager {
   }
   
   static bool canAccessAdminFeatures() {
-    return _currentUser?.role == 'Admin';
+    return _currentUser?.role == 'Library Staff';
   }
 
   /// Initialize the UserManager by loading the current user from local storage.
@@ -43,7 +43,7 @@ class UserManager {
   }) async {
     try {
       // Validate role
-      if (!['Admin', 'Staff', 'Student'].contains(role)) {
+      if (!['Library Staff', 'Staff', 'Student'].contains(role)) {
         throw Exception('Invalid role specified');
       }
 
@@ -90,7 +90,7 @@ class UserManager {
       String matricID, String password, String selectedRole) async {
     try {
       // Validate role
-      if (!['Admin', 'Staff', 'Student'].contains(selectedRole)) {
+      if (!['Library Staff', 'Staff', 'Student'].contains(selectedRole)) {
         print('Invalid role selected');
         return false;
       }

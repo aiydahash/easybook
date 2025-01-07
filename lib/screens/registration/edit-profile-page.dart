@@ -13,7 +13,6 @@ class EditProfilePage extends StatefulWidget {
   final String course;
   final String semester;
   final String department;
-  final String adminCode;
 
   const EditProfilePage({
     super.key,
@@ -24,7 +23,6 @@ class EditProfilePage extends StatefulWidget {
     required this.course,
     required this.semester,
     required this.department,
-    required this.adminCode,
   });
 
   @override
@@ -38,7 +36,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController courseController;
   late TextEditingController semesterController;
   late TextEditingController departmentController;
-  late TextEditingController adminCodeController;
 
   @override
   void initState() {
@@ -49,7 +46,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     courseController = TextEditingController(text: widget.course);
     semesterController = TextEditingController(text: widget.semester);
     departmentController = TextEditingController(text: widget.department);
-    adminCodeController = TextEditingController(text: widget.adminCode);
   }
 
   @override
@@ -60,7 +56,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     courseController.dispose();
     semesterController.dispose();
     departmentController.dispose();
-    adminCodeController.dispose();
     super.dispose();
   }
 
@@ -144,10 +139,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ProfileField(
                   label: 'Department', controller: departmentController),
             ],
-            if (widget.role == 'Admin') ...[
-              ProfileField(
-                  label: 'Admin Code', controller: adminCodeController),
-            ],
             const SizedBox(height: 30),
             // Save Button
             ElevatedButton(
@@ -160,7 +151,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   'course': courseController.text,
                   'semester': semesterController.text,
                   'department': departmentController.text,
-                  'adminCode': adminCodeController.text,
                 });
               },
               style: ElevatedButton.styleFrom(

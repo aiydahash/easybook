@@ -92,6 +92,18 @@ class HomePage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(
+                  15), 
+              child: Image.asset(
+                'assets/images/ump library.jpg',
+                height: 150,
+                width: 150,
+                fit:
+                    BoxFit.cover, 
+              ),
+            ),
+            const SizedBox(height: 20),
             const Text(
               'Welcome to UMPSA Library, Pekan!',
               style: TextStyle(
@@ -127,7 +139,7 @@ class HomePage extends StatelessWidget {
             ],
 
             // Show these buttons only to Admin
-            if (userRole == 'Admin') ...[
+            if (userRole == 'Library Staff') ...[
               MenuButton(
                 title: 'USER LIST',
                 onPressed: () {

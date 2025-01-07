@@ -22,62 +22,68 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Stream<List<BookingNotification>> _getNotifications() {
-    // Combine both room and facility bookings
-    return FirebaseFirestore.instance
-        .collection('bookings')
-        .where('status', isEqualTo: 'UPCOMING')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .asyncMap((bookingsSnapshot) async {
-      final List<BookingNotification> notifications = [];
+  final now = DateTime.now();
 
-      // Process room bookings
-      for (var doc in bookingsSnapshot.docs) {
-        final data = doc.data();
-        // Check if the booking is within 24 hours
-        final bookingDate = DateTime.parse(data['date']);
-        final now = DateTime.now();
+  return FirebaseFirestore.instance
+      .collection('bookings')
+      .where('status', isEqualTo: 'UPCOMING')
+      .snapshots()
+      .map((bookingsSnapshot) {
+    final List<BookingNotification> notifications = [];
+
+    for (var doc in bookingsSnapshot.docs) {
+      final data = doc.data();
+      debugPrint('Document data: $data'); // Debug: Print each document's data
+
+      try {
+        // Safely retrieve and parse Firestore fields
+        final roomName = data['roomName'] as String? ?? 'Unknown Room';
+        final numberOfPeople = data['peopleCount'] as int? ?? 0;
+        final dateStr = data['date'] as String?;
+        final startTime = data['startTime'] as String? ?? 'Unknown';
+        final endTime = data['endTime'] as String? ?? 'Unknown';
+        final status = data['status'] as String? ?? 'Unknown Status';
+
+        if (dateStr == null) {
+          debugPrint('Missing "date" field in document ${doc.id}');
+          continue; // Skip this document
+        }
+
+        // Parse date
+        final bookingDate = DateTime.tryParse(dateStr);
+        if (bookingDate == null) {
+          debugPrint('Invalid date format in document ${doc.id}: $dateStr');
+          continue; // Skip this document
+        }
+
+        // Add notification if within 24 hours
         if (bookingDate.difference(now).inHours <= 24) {
           notifications.add(
             BookingNotification(
-              roomName: data['roomName'] ?? 'Unknown Room',
-              numberOfPeople: data['peopleCount'] ?? 0,
-              date: data['date'] ?? 'Unknown Date',
-              time: '${data['startTime']} - ${data['endTime']}',
-              status: data['status'] ?? 'UPCOMING',
+              roomName: roomName,
+              numberOfPeople: numberOfPeople,
+              date: dateStr,
+              time: '$startTime - $endTime',
+              status: status,
             ),
           );
         }
+      } catch (e, stackTrace) {
+        debugPrint('Error processing document ${doc.id}: $e');
+        debugPrint('StackTrace: $stackTrace');
       }
+    }
 
-      // Also fetch facility bookings
-      final facilitySnapshot = await FirebaseFirestore.instance
-          .collection('facility_bookings')
-          .where('status', isEqualTo: 'UPCOMING')
-          .orderBy('timestamp', descending: true)
-          .get();
-
-      for (var doc in facilitySnapshot.docs) {
-        final data = doc.data();
-        // Check if the booking is within 24 hours
-        final bookingDate = DateTime.parse(data['date']);
-        final now = DateTime.now();
-        if (bookingDate.difference(now).inHours <= 24) {
-          notifications.add(
-            BookingNotification(
-              roomName: data['facilityName'] ?? 'Unknown Facility',
-              numberOfPeople: data['peopleCount'] ?? 0,
-              date: data['date'] ?? 'Unknown Date',
-              time: '${data['startTime']} - ${data['endTime']}',
-              status: data['status'] ?? 'UPCOMING',
-            ),
-          );
-        }
-      }
-
-      return notifications;
+    // Sort notifications by date
+    notifications.sort((a, b) {
+      final timestampA = DateTime.tryParse(a.date) ?? DateTime(1970);
+      final timestampB = DateTime.tryParse(b.date) ?? DateTime(1970);
+      return timestampB.compareTo(timestampA);
     });
-  }
+
+    return notifications;
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +245,8 @@ class _NotificationPageState extends State<NotificationPage> {
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BookingHistoryPage()),
+                MaterialPageRoute(
+                    builder: (context) => const BookingHistoryPage()),
               );
               break;
             case 3:
@@ -315,8 +322,8 @@ class NotificationCard extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8.0),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0, vertical: 4.0),
                   child: Text(
                     status,
                     style: const TextStyle(

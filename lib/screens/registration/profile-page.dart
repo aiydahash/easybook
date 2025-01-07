@@ -25,7 +25,6 @@ class _ProfilePageState extends State<ProfilePage> {
   late String course = '';
   late String semester = '';
   late String department = '';
-  late String adminCode = '';
 
   @override
   void initState() {
@@ -52,9 +51,6 @@ class _ProfilePageState extends State<ProfilePage> {
           case 'Staff':
             department = currentUser.additionalInfo?['department'] ?? "Not set";
             break;
-          case 'Admin':
-            adminCode = currentUser.additionalInfo?['adminCode'] ?? "Not set";
-            break;
         }
       });
     }
@@ -75,9 +71,6 @@ class _ProfilePageState extends State<ProfilePage> {
         case 'Staff':
           department = updatedData['department'] ?? department;
           break;
-        case 'Admin':
-          adminCode = updatedData['adminCode'] ?? adminCode;
-          break;
       }
     });
 
@@ -88,7 +81,6 @@ class _ProfilePageState extends State<ProfilePage> {
         'course': course,
         'semester': semester,
         'department': department,
-        'adminCode': adminCode,
       },
     );
   }
@@ -195,8 +187,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ProfileDetail(label: 'Semester', value: semester),
               ] else if (role == 'Staff') ...[
                 ProfileDetail(label: 'Department', value: department),
-              ] else if (role == 'Admin') ...[
-                ProfileDetail(label: 'Admin Code', value: adminCode),
               ],
 
               const SizedBox(height: 30),
@@ -213,7 +203,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         course: course,
                         semester: semester,
                         department: department,
-                        adminCode: adminCode,
                       ),
                     ),
                   );

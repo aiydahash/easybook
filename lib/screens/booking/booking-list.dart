@@ -9,13 +9,17 @@ import '../search-page.dart';
 class BookingListPage extends StatelessWidget {
   const BookingListPage({super.key});
 
-  // Helper method to format timestamp
-  String _formatTimestamp(Timestamp timestamp) {
-    final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year}';
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp is Timestamp) {
+      final date = timestamp.toDate();
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (timestamp is String) {
+      return timestamp;
+    }
+    return 'Unknown Date';
   }
 
-  // Helper method to get status color
+// Helper method to get status color
   Color _getStatusColor(String status) {
     switch (status.toUpperCase()) {
       case 'COMPLETED':
@@ -31,7 +35,6 @@ class BookingListPage extends StatelessWidget {
     }
   }
 
-  // Helper method to fetch user details
   Future<Map<String, dynamic>> _getUserDetails(String userId) async {
     try {
       final userDoc = await FirebaseFirestore.instance
@@ -61,18 +64,20 @@ class BookingListPage extends StatelessWidget {
     }
   }
 
-  // Helper method to process bookings
   Future<List<Map<String, dynamic>>> _processBookings(
     QuerySnapshot? roomSnapshot,
     QuerySnapshot? facilitySnapshot,
   ) async {
     List<Map<String, dynamic>> allBookings = [];
 
-    // Process room bookings
     if (roomSnapshot != null) {
       for (var doc in roomSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final userId = data['userId'] ?? '';
+        final Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
+        final DateTime dateTime = timestamp.toDate();
+        final String bookingDate = data['date'] ??
+            '${dateTime.day}/${dateTime.month}/${dateTime.year}';
 
         Map<String, dynamic> userDetails;
         if (userId.isNotEmpty) {
@@ -92,15 +97,19 @@ class BookingListPage extends StatelessWidget {
           'userName': userDetails['name'],
           'userRole': userDetails['role'],
           'userMatricId': userDetails['matricId'],
+          'formattedDate': bookingDate,
         });
       }
     }
 
-    // Process facility bookings
     if (facilitySnapshot != null) {
       for (var doc in facilitySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final userId = data['userId'] ?? '';
+        final Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
+        final DateTime dateTime = timestamp.toDate();
+        final String bookingDate = data['date'] ??
+            '${dateTime.day}/${dateTime.month}/${dateTime.year}';
 
         Map<String, dynamic> userDetails;
         if (userId.isNotEmpty) {
@@ -120,11 +129,11 @@ class BookingListPage extends StatelessWidget {
           'userName': userDetails['name'],
           'userRole': userDetails['role'],
           'userMatricId': userDetails['matricId'],
+          'formattedDate': bookingDate,
         });
       }
     }
 
-    // Sort bookings by timestamp
     allBookings.sort((a, b) =>
         (b['timestamp'] as Timestamp).compareTo(a['timestamp'] as Timestamp));
 

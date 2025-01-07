@@ -95,6 +95,12 @@ class BookingHistoryPage extends StatelessWidget {
                       if (roomSnapshot.hasData) {
                         for (var doc in roomSnapshot.data!.docs) {
                           final data = doc.data() as Map<String, dynamic>;
+                          final Timestamp timestamp =
+                              data['timestamp'] ?? Timestamp.now();
+                          final DateTime dateTime = timestamp.toDate();
+                          final String formattedDate = data['date'] ??
+                              '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+
                           allBookings.add(
                             BookingItem(
                               id: doc.id,
@@ -102,8 +108,8 @@ class BookingHistoryPage extends StatelessWidget {
                               type: 'Study Room',
                               peopleCount: data['peopleCount'] ?? 0,
                               status: data['status'] ?? 'UPCOMING',
-                              timestamp: data['timestamp'] as Timestamp,
-                              date: data['date'] ?? 'Unknown Date',
+                              timestamp: timestamp,
+                              date: formattedDate,
                               startTime: data['startTime'] ?? 'Unknown Time',
                               endTime: data['endTime'] ?? 'Unknown Time',
                             ),
@@ -114,6 +120,12 @@ class BookingHistoryPage extends StatelessWidget {
                       if (facilitySnapshot.hasData) {
                         for (var doc in facilitySnapshot.data!.docs) {
                           final data = doc.data() as Map<String, dynamic>;
+                          final Timestamp timestamp =
+                              data['timestamp'] ?? Timestamp.now();
+                          final DateTime dateTime = timestamp.toDate();
+                          final String formattedDate = data['date'] ??
+                              '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+
                           allBookings.add(
                             BookingItem(
                               id: doc.id,
@@ -121,8 +133,8 @@ class BookingHistoryPage extends StatelessWidget {
                               type: 'Facility',
                               peopleCount: data['peopleCount'] ?? 0,
                               status: data['status'] ?? 'UPCOMING',
-                              timestamp: data['timestamp'] as Timestamp,
-                              date: data['date'] ?? 'Unknown Date',
+                              timestamp: timestamp,
+                              date: formattedDate,
                               startTime: data['startTime'] ?? 'Unknown Time',
                               endTime: data['endTime'] ?? 'Unknown Time',
                             ),
@@ -250,6 +262,15 @@ class BookingItem {
     required this.startTime,
     required this.endTime,
   });
+
+  String getFormattedDate() {
+    if (date != 'Unknown Date') {
+      return date;
+    } else {
+      final DateTime dateTime = timestamp.toDate();
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+  }
 }
 
 class BookingCard extends StatelessWidget {

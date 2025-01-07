@@ -18,7 +18,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       TextEditingController();
 
   // Role-specific fields
-  final TextEditingController _adminCodeController = TextEditingController();
   final TextEditingController _staffDepartmentController =
       TextEditingController();
   final TextEditingController _studentCourseController = TextEditingController();
@@ -95,7 +94,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               // Role Dropdown
               DropdownButtonFormField<String>(
                 value: _selectedRole,
-                items: ['Admin', 'Staff', 'Student'].map((role) {
+                items: ['Library Staff', 'Staff', 'Student'].map((role) {
                   return DropdownMenuItem(
                     value: role,
                     child: Text(role),
@@ -166,12 +165,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Widget _buildRoleSpecificFields() {
-    if (_selectedRole == 'Admin') {
-      return _buildTextField(
-        controller: _adminCodeController,
-        label: 'Admin Code',
-      );
-    } else if (_selectedRole == 'Staff') {
+    if (_selectedRole == 'Staff') {
       return _buildTextField(
         controller: _staffDepartmentController,
         label: 'Department',
@@ -201,10 +195,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
 
     // Add validation for role-specific fields
-    if (_selectedRole == 'Admin' && _adminCodeController.text.isEmpty) {
-      showSnackbar(context, 'Please enter Admin Code!');
-      return;
-    } else if (_selectedRole == 'Staff' &&
+    if (_selectedRole == 'Staff' &&
         _staffDepartmentController.text.isEmpty) {
       showSnackbar(context, 'Please enter Department!');
       return;
@@ -223,7 +214,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         password: _passwordController.text,
         role: _selectedRole,
         additionalInfo: {
-          'adminCode': _adminCodeController.text,
           'department': _staffDepartmentController.text,
           'course': _studentCourseController.text,
         },
