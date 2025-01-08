@@ -11,11 +11,11 @@ class AvailableStudyRoomPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> facilities = [
-      {'name': 'Study Room 1', 'capacity': '8 people'},
-      {'name': 'Study Room 2', 'capacity': '8 people'},
-      {'name': 'Study Room 3', 'capacity': '8 people'},
-      {'name': 'Study Room 4', 'capacity': '8 people'},
+    final List<Map<String, String>> studyRooms = [
+      {'name': 'Study Room 1', 'capacity': 'max 8 people'},
+      {'name': 'Study Room 2', 'capacity': 'max 8 people'},
+      {'name': 'Study Room 3', 'capacity': 'max 8 people'},
+      {'name': 'Study Room 4', 'capacity': 'max 8 people'},
     ];
 
     return Scaffold(
@@ -84,13 +84,13 @@ class AvailableStudyRoomPage extends StatelessWidget {
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
-                itemCount: facilities.length,
+                itemCount: studyRooms.length,
                 itemBuilder: (context, index) {
-                  final facility = facilities[index];
-                  return FacilityCard(
-                    name: facility['name']!,
-                    capacity: facility['capacity']!,
-                    onBookPressed: () => showDateTimePicker(context, facility),
+                  final room = studyRooms[index];
+                  return BookingCard(
+                    name: room['name']!,
+                    capacity: room['capacity']!,
+                    onBookPressed: () => showDateTimePicker(context, room),
                   );
                 },
               ),
@@ -155,7 +155,7 @@ class AvailableStudyRoomPage extends StatelessWidget {
   }
 
   void showDateTimePicker(
-      BuildContext context, Map<String, String> facility) async {
+      BuildContext context, Map<String, String> room) async {
     final DateTime? selectedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -176,7 +176,6 @@ class AvailableStudyRoomPage extends StatelessWidget {
         );
 
         if (endTime != null) {
-          // Ensure end time is after start time
           if (endTime.hour < startTime.hour ||
               (endTime.hour == startTime.hour &&
                   endTime.minute <= startTime.minute)) {
@@ -194,10 +193,10 @@ class AvailableStudyRoomPage extends StatelessWidget {
           final endBookingTime = endTime.format(context);
 
           final bookingData = {
-            'roomName': facility['name']!,
-            'capacity': facility['capacity']!,
-            'peopleCount': 4, // Example value, can be modified
-            'date': bookingDate, // Add this line
+            'roomName': room['name']!,
+            'capacity': room['capacity']!,
+            'peopleCount': 4,
+            'date': bookingDate,
             'status': 'UPCOMING',
             'startTime': startBookingTime,
             'endTime': endBookingTime,
@@ -212,7 +211,7 @@ class AvailableStudyRoomPage extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  '${facility['name']} booked successfully for $bookingDate from $startBookingTime to $endBookingTime!',
+                  '${room['name']} booked successfully for $bookingDate from $startBookingTime to $endBookingTime!',
                 ),
               ),
             );
@@ -230,12 +229,12 @@ class AvailableStudyRoomPage extends StatelessWidget {
   }
 }
 
-class FacilityCard extends StatelessWidget {
+class BookingCard extends StatelessWidget {
   final String name;
   final String capacity;
   final VoidCallback onBookPressed;
 
-  const FacilityCard({
+  const BookingCard({
     super.key,
     required this.name,
     required this.capacity,
@@ -245,33 +244,69 @@ class FacilityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 10),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.0),
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(color: Colors.grey.shade300),
       ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-        title: Text(
-          name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          capacity,
-          style: const TextStyle(color: Colors.grey),
-        ),
-        trailing: ElevatedButton(
-          onPressed: onBookPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.people,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          capacity,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: onBookPressed,
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: const Text('Book'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 1, 10, 61),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          child: const Text(
-            'Book',
-            style: TextStyle(color: Colors.white),
-          ),
+          ],
         ),
       ),
     );

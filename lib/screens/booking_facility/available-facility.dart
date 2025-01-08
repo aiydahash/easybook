@@ -12,10 +12,10 @@ class AvailableFacilityPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, String>> facilities = [
-      {'name': 'Auditorium', 'capacity': '200 people'},
-      {'name': 'Computer Lab', 'capacity': '60 people'},
-      {'name': 'Executive Lounge', 'capacity': '52 people'},
-      {'name': 'Seminar Room 1', 'capacity': '30 people'},
+      {'name': 'Auditorium', 'capacity': 'max 200 people'},
+      {'name': 'Computer Lab', 'capacity': 'max 60 people'},
+      {'name': 'Executive Lounge', 'capacity': 'max 52 people'},
+      {'name': 'Seminar Room 1', 'capacity': 'max 30 people'},
     ];
 
     return Scaffold(
@@ -249,33 +249,69 @@ class FacilityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 10),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.0),
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(color: Colors.grey.shade300),
       ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-        title: Text(
-          name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          capacity,
-          style: const TextStyle(color: Colors.grey),
-        ),
-        trailing: ElevatedButton(
-          onPressed: onBookPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.people,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          capacity,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: onBookPressed,
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: const Text('Book'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 1, 10, 61),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          child: const Text(
-            'Book',
-            style: TextStyle(color: Colors.white),
-          ),
+          ],
         ),
       ),
     );
