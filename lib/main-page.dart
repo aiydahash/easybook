@@ -93,14 +93,12 @@ class HomePage extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             ClipRRect(
-              borderRadius: BorderRadius.circular(
-                  15), 
+              borderRadius: BorderRadius.circular(15),
               child: Image.asset(
                 'assets/images/ump library.jpg',
                 height: 150,
                 width: 150,
-                fit:
-                    BoxFit.cover, 
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(height: 20),

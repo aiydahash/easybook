@@ -403,8 +403,8 @@ class BookingCard extends StatelessWidget {
   final String matricId;
   final String roomName;
   final String bookingDate;
-  final String startTime; // Changed
-  final String endTime; // Added
+  final String startTime;
+  final String endTime;
   final String status;
   final Color statusColor;
 
@@ -415,8 +415,8 @@ class BookingCard extends StatelessWidget {
     required this.matricId,
     required this.roomName,
     required this.bookingDate,
-    required this.startTime, // Changed
-    required this.endTime, // Added
+    required this.startTime,
+    required this.endTime,
     required this.status,
     required this.statusColor,
   });
