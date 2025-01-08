@@ -14,7 +14,7 @@ class UserManager {
   
   // Add role-based access control methods
   static bool canAccessBookingFeatures() {
-    return _currentUser?.role == 'Student' || _currentUser?.role == 'Staff';
+    return _currentUser?.role == 'Student' || _currentUser?.role == 'UMPSA Staff';
   }
   
   static bool canAccessAdminFeatures() {
@@ -43,7 +43,7 @@ class UserManager {
   }) async {
     try {
       // Validate role
-      if (!['Library Staff', 'Staff', 'Student'].contains(role)) {
+      if (!['Library Staff', 'UMPSA Staff', 'Student'].contains(role)) {
         throw Exception('Invalid role specified');
       }
 
@@ -90,7 +90,7 @@ class UserManager {
       String matricID, String password, String selectedRole) async {
     try {
       // Validate role
-      if (!['Library Staff', 'Staff', 'Student'].contains(selectedRole)) {
+      if (!['Library Staff', 'UMPSA Staff', 'Student'].contains(selectedRole)) {
         print('Invalid role selected');
         return false;
       }

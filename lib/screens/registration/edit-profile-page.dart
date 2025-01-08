@@ -135,7 +135,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ProfileField(label: 'Course', controller: courseController),
               ProfileField(label: 'Semester', controller: semesterController),
             ],
-            if (widget.role == 'Staff') ...[
+            if (widget.role == 'UMPSA Staff') ...[
               ProfileField(
                   label: 'Department', controller: departmentController),
             ],

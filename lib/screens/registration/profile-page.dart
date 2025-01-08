@@ -48,7 +48,7 @@ class _ProfilePageState extends State<ProfilePage> {
             course = currentUser.additionalInfo?['course'] ?? "Not set";
             semester = currentUser.additionalInfo?['semester'] ?? "Not set";
             break;
-          case 'Staff':
+          case 'UMPSA Staff':
             department = currentUser.additionalInfo?['department'] ?? "Not set";
             break;
         }
@@ -68,7 +68,7 @@ class _ProfilePageState extends State<ProfilePage> {
           course = updatedData['course'] ?? course;
           semester = updatedData['semester'] ?? semester;
           break;
-        case 'Staff':
+        case 'UMPSA Staff':
           department = updatedData['department'] ?? department;
           break;
       }
@@ -185,7 +185,7 @@ class _ProfilePageState extends State<ProfilePage> {
               if (role == 'Student') ...[
                 ProfileDetail(label: 'Course', value: course),
                 ProfileDetail(label: 'Semester', value: semester),
-              ] else if (role == 'Staff') ...[
+              ] else if (role == 'UMPSA Staff') ...[
                 ProfileDetail(label: 'Department', value: department),
               ],
 

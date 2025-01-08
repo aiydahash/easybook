@@ -94,7 +94,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               // Role Dropdown
               DropdownButtonFormField<String>(
                 value: _selectedRole,
-                items: ['Library Staff', 'Staff', 'Student'].map((role) {
+                items: ['Library Staff', 'UMPSA Staff', 'Student'].map((role) {
                   return DropdownMenuItem(
                     value: role,
                     child: Text(role),
@@ -165,7 +165,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Widget _buildRoleSpecificFields() {
-    if (_selectedRole == 'Staff') {
+    if (_selectedRole == 'UMPSA Staff') {
       return _buildTextField(
         controller: _staffDepartmentController,
         label: 'Department',
@@ -195,7 +195,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
 
     // Add validation for role-specific fields
-    if (_selectedRole == 'Staff' &&
+    if (_selectedRole == 'UMPSA Staff' &&
         _staffDepartmentController.text.isEmpty) {
       showSnackbar(context, 'Please enter Department!');
       return;

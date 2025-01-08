@@ -33,7 +33,7 @@ class _UserListPageState extends State<UserListPage> {
   @override
   Widget build(BuildContext context) {
     final students = users.where((user) => user.role == 'Student').toList();
-    final staff = users.where((user) => user.role == 'Staff').toList();
+    final staff = users.where((user) => user.role == 'UMPSA Staff').toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -109,7 +109,7 @@ class _UserListPageState extends State<UserListPage> {
                       )),
                   const SizedBox(height: 20),
                   const Text(
-                    'Staff',
+                    'UMPSA Staff',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,

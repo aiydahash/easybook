@@ -74,7 +74,8 @@ class _FacilityListPageState extends State<FacilityListPage> {
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         leading: IconButton(
-          icon: const Icon(Icons.notifications_active_outlined, color: Colors.white),
+          icon: const Icon(Icons.notifications_active_outlined,
+              color: Colors.white),
           onPressed: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const NotificationPage()),
@@ -100,7 +101,8 @@ class _FacilityListPageState extends State<FacilityListPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.arrow_circle_left_outlined, color: Colors.white),
+            icon: const Icon(Icons.arrow_circle_left_outlined,
+                color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -119,7 +121,9 @@ class _FacilityListPageState extends State<FacilityListPage> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('facilities').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('facilities')
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -202,7 +206,10 @@ class FacilityCard extends StatelessWidget {
 
   Future<void> _deleteFacility(BuildContext context) async {
     try {
-      await FirebaseFirestore.instance.collection('facilities').doc(facilityId).delete();
+      await FirebaseFirestore.instance
+          .collection('facilities')
+          .doc(facilityId)
+          .delete();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Facility deleted successfully')),
       );
@@ -229,11 +236,8 @@ class FacilityCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.edit_outlined, color: Colors.white),
-              onPressed: onUpdate,
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+              icon:
+                  const Icon(Icons.delete_outline_rounded, color: Colors.white),
               onPressed: () => _deleteFacility(context),
             ),
           ],

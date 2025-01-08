@@ -113,7 +113,7 @@ class HomePage extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 15),
-            if (userRole == 'Student' || userRole == 'Staff') ...[
+            if (userRole == 'Student' || userRole == 'UMPSA Staff') ...[
               MenuButton(
                 title: 'BOOK STUDY ROOM',
                 onPressed: () {

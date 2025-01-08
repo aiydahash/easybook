@@ -6,7 +6,7 @@ class AppUser {
   final String role;
   final String? course;
   final String? semester;
-  final Map<String, dynamic>? additionalInfo; // Add this field
+  final Map<String, dynamic>? additionalInfo;
 
   AppUser({
     required this.id,
@@ -16,7 +16,7 @@ class AppUser {
     required this.role,
     this.course,
     this.semester,
-    this.additionalInfo, // Initialize additionalInfo
+    this.additionalInfo,
   });
 
   // Factory constructor to create an AppUser from a Map
@@ -29,7 +29,7 @@ class AppUser {
       role: map['role'] ?? '',
       course: map['course'],
       semester: map['semester'],
-      additionalInfo: map['additionalInfo'], // Parse additionalInfo
+      additionalInfo: map['additionalInfo'],
     );
   }
 
@@ -43,7 +43,7 @@ class AppUser {
       'role': role,
       'course': course,
       'semester': semester,
-      'additionalInfo': additionalInfo, // Add additionalInfo
+      'additionalInfo': additionalInfo,
     };
   }
 
