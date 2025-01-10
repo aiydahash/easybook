@@ -11,13 +11,6 @@ class AvailableStudyRoomPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> studyRooms = [
-      {'name': 'Study Room 1', 'capacity': 'max 8 people'},
-      {'name': 'Study Room 2', 'capacity': 'max 8 people'},
-      {'name': 'Study Room 3', 'capacity': 'max 8 people'},
-      {'name': 'Study Room 4', 'capacity': 'max 8 people'},
-    ];
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
@@ -83,14 +76,33 @@ class AvailableStudyRoomPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: ListView.builder(
-                itemCount: studyRooms.length,
-                itemBuilder: (context, index) {
-                  final room = studyRooms[index];
-                  return BookingCard(
-                    name: room['name']!,
-                    capacity: room['capacity']!,
-                    onBookPressed: () => showDateTimePicker(context, room),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('rooms').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('No rooms available'));
+                  }
+
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      final room = snapshot.data!.docs[index];
+                      return BookingCard(
+                        name: room['name'],
+                        capacity: 'max ${room['capacity']} people',
+                        onBookPressed: () => showDateTimePicker(
+                          context,
+                          {
+                            'name': room['name'],
+                            'capacity': 'max ${room['capacity']} people'
+                          },
+                        ),
+                      );
+                    },
                   );
                 },
               ),

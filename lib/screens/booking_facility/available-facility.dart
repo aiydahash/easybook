@@ -11,13 +11,6 @@ class AvailableFacilityPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> facilities = [
-      {'name': 'Auditorium', 'capacity': 'max 200 people'},
-      {'name': 'Computer Lab', 'capacity': 'max 60 people'},
-      {'name': 'Executive Lounge', 'capacity': 'max 52 people'},
-      {'name': 'Seminar Room 1', 'capacity': 'max 30 people'},
-    ];
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
@@ -83,19 +76,33 @@ class AvailableFacilityPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: ListView.builder(
-                itemCount: facilities.length,
-                itemBuilder: (context, index) {
-                  final facility = facilities[index];
-                  return Column(
-                    children: [
-                      FacilityCard(
-                        name: facility['name']!,
-                        capacity: facility['capacity']!,
-                        onBookPressed: () =>
-                            showDateTimePicker(context, facility),
-                      ),
-                    ],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('facilities').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('No facilities available'));
+                  }
+
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      final facility = snapshot.data!.docs[index];
+                      return FacilityCard(
+                        name: facility['name'],
+                        capacity: 'max ${facility['capacity']} people',
+                        onBookPressed: () => showDateTimePicker(
+                          context,
+                          {
+                            'name': facility['name'],
+                            'capacity': 'max ${facility['capacity']} people'
+                          },
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -181,7 +188,6 @@ class AvailableFacilityPage extends StatelessWidget {
         );
 
         if (endTime != null) {
-          // Validate that end time is after start time
           if (endTime.hour < startTime.hour ||
               (endTime.hour == startTime.hour &&
                   endTime.minute <= startTime.minute)) {
@@ -201,7 +207,7 @@ class AvailableFacilityPage extends StatelessWidget {
           final bookingData = {
             'facilityName': facility['name']!,
             'capacity': facility['capacity']!,
-            'peopleCount': 4, // Example value, can be modified
+            'peopleCount': 4,
             'status': 'UPCOMING',
             'date': bookingDate,
             'startTime': startBookingTime,
