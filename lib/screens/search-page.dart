@@ -4,24 +4,8 @@ import 'booking/booking-history.dart';
 import 'notification-page.dart';
 import 'registration/profile-page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'EasyBook',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const HomePage(),
-    );
-  }
-}
+import 'booking_room/available-study-room.dart.dart';
+import 'booking_facility/available-facility.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -35,7 +19,7 @@ class _SearchPageState extends State<SearchPage> {
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
   List<String> roomTypes = [];
-  List<Map<String, dynamic>> filteredBookings = [];
+  List<Map<String, dynamic>> availableRooms = [];
 
   @override
   void initState() {
@@ -45,30 +29,48 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _loadRoomTypes() async {
     try {
-      final roomSnapshot =
-          await FirebaseFirestore.instance.collection('bookings').get();
-      final facilitySnapshot = await FirebaseFirestore.instance
-          .collection('facility_bookings')
-          .get();
+      final roomSnapshot = await FirebaseFirestore.instance.collection('rooms').get();
+      final facilitySnapshot = await FirebaseFirestore.instance.collection('facilities').get();
 
       final Set<String> types = {};
       for (var doc in roomSnapshot.docs) {
         final data = doc.data();
-        types.add(data['roomName'] ?? 'Unknown Room');
+        types.add(data['name'] ?? 'Unknown Room');
       }
       for (var doc in facilitySnapshot.docs) {
         final data = doc.data();
-        types.add(data['facilityName'] ?? 'Unknown Facility');
+        types.add(data['name'] ?? 'Unknown Facility');
       }
 
       setState(() {
         roomTypes = types.toList();
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading room types: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading room types: $e')),
+        );
+      }
     }
+  }
+
+  bool _isTimeConflict(String startTime1, String endTime1, String startTime2, String endTime2) {
+    // Convert time strings to comparable values (minutes since midnight)
+    int getMinutes(String time) {
+      final parts = time.split(':');
+      if (parts.length != 2) return 0;
+      final hours = int.tryParse(parts[0]) ?? 0;
+      final minutes = int.tryParse(parts[1].split(' ')[0]) ?? 0;
+      final isPM = time.toLowerCase().contains('pm');
+      return (hours + (isPM && hours != 12 ? 12 : 0)) * 60 + minutes;
+    }
+
+    final start1 = getMinutes(startTime1);
+    final end1 = getMinutes(endTime1);
+    final start2 = getMinutes(startTime2);
+    final end2 = getMinutes(endTime2);
+
+    return (start1 < end2) && (end1 > start2);
   }
 
   void _searchRooms() async {
@@ -80,54 +82,105 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     try {
-      final roomSnapshot = await FirebaseFirestore.instance
+      // Get all rooms and facilities
+      final roomsSnapshot = await FirebaseFirestore.instance.collection('rooms').get();
+      final facilitiesSnapshot = await FirebaseFirestore.instance.collection('facilities').get();
+
+      // Get existing bookings for the selected date
+      final bookingDate = '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}';
+      final roomBookingsSnapshot = await FirebaseFirestore.instance
           .collection('bookings')
-          .orderBy('timestamp', descending: true)
+          .where('date', isEqualTo: bookingDate)
           .get();
-
-      final facilitySnapshot = await FirebaseFirestore.instance
+      
+      final facilityBookingsSnapshot = await FirebaseFirestore.instance
           .collection('facility_bookings')
-          .orderBy('timestamp', descending: true)
+          .where('date', isEqualTo: bookingDate)
           .get();
 
-      final List<Map<String, dynamic>> allBookings = [];
-
-      for (var doc in roomSnapshot.docs) {
+      // Create maps of existing bookings
+      final Map<String, List<Map<String, String>>> existingBookings = {};
+      
+      for (var doc in roomBookingsSnapshot.docs) {
         final data = doc.data();
-        allBookings.add({
-          'roomType': data['roomName'] ?? 'Unknown Room',
-          'date': data['date'],
-          'startTime': data['startTime'],
-          'endTime': data['endTime'],
+        final roomName = data['roomName'] as String;
+        existingBookings[roomName] ??= [];
+        existingBookings[roomName]!.add({
+          'startTime': data['startTime'] as String,
+          'endTime': data['endTime'] as String,
         });
       }
 
-      for (var doc in facilitySnapshot.docs) {
+      for (var doc in facilityBookingsSnapshot.docs) {
         final data = doc.data();
-        allBookings.add({
-          'roomType': data['facilityName'] ?? 'Unknown Facility',
-          'date': data['date'],
-          'startTime': data['startTime'],
-          'endTime': data['endTime'],
+        final facilityName = data['facilityName'] as String;
+        existingBookings[facilityName] ??= [];
+        existingBookings[facilityName]!.add({
+          'startTime': data['startTime'] as String,
+          'endTime': data['endTime'] as String,
         });
+      }
+
+      // Check availability for each room and facility
+      final List<Map<String, dynamic>> available = [];
+      
+      // Function to check if a space is available
+      bool isSpaceAvailable(String spaceName, String proposedStartTime) {
+        if (!existingBookings.containsKey(spaceName)) return true;
+        
+        // Assume booking duration is 1 hour
+        final proposedEndTime = TimeOfDay(
+          hour: (selectedTime!.hour + 1) % 24,
+          minute: selectedTime!.minute,
+        ).format(context);
+
+        return !existingBookings[spaceName]!.any((booking) =>
+          _isTimeConflict(
+            proposedStartTime,
+            proposedEndTime,
+            booking['startTime']!,
+            booking['endTime']!,
+          ));
+      }
+
+      // Check rooms
+      for (var doc in roomsSnapshot.docs) {
+        final data = doc.data();
+        final roomName = data['name'] as String;
+        
+        if (selectedRoomType == null || selectedRoomType == roomName) {
+          if (isSpaceAvailable(roomName, selectedTime!.format(context))) {
+            available.add({
+              'name': roomName,
+              'type': 'Study Room',
+              'capacity': data['capacity'],
+            });
+          }
+        }
+      }
+
+      // Check facilities
+      for (var doc in facilitiesSnapshot.docs) {
+        final data = doc.data();
+        final facilityName = data['name'] as String;
+        
+        if (selectedRoomType == null || selectedRoomType == facilityName) {
+          if (isSpaceAvailable(facilityName, selectedTime!.format(context))) {
+            available.add({
+              'name': facilityName,
+              'type': 'Facility',
+              'capacity': data['capacity'],
+            });
+          }
+        }
       }
 
       setState(() {
-        filteredBookings = allBookings.where((booking) {
-          final bookingDate = booking['date'];
-          final bookingStartTime = TimeOfDay(
-            hour: int.parse(booking['startTime'].split(':')[0]),
-            minute: int.parse(booking['startTime'].split(':')[1]),
-          );
-          return bookingDate == '${selectedDate!.toLocal()}'.split(' ')[0] &&
-              bookingStartTime == selectedTime &&
-              (selectedRoomType == null ||
-                  booking['roomType'] == selectedRoomType);
-        }).toList();
+        availableRooms = available;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error retrieving bookings: $e')),
+        SnackBar(content: Text('Error searching for rooms: $e')),
       );
     }
   }
@@ -138,10 +191,7 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         leading: IconButton(
-          icon: const Icon(
-            Icons.notifications_active_outlined,
-            color: Colors.white,
-          ),
+          icon: const Icon(Icons.notifications_active_outlined, color: Colors.white),
           onPressed: () {
             Navigator.push(
               context,
@@ -175,13 +225,8 @@ class _SearchPageState extends State<SearchPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.arrow_circle_left_outlined,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            icon: const Icon(Icons.arrow_circle_left_outlined, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
@@ -196,32 +241,21 @@ class _SearchPageState extends State<SearchPage> {
               style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 30),
-            // Room Type Dropdown
             DropdownButtonFormField<String>(
               decoration: InputDecoration(
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(40.0)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(40.0)),
                 hintText: 'Room Type',
               ),
-              items: roomTypes
-                  .map((type) =>
-                      DropdownMenuItem(value: type, child: Text(type)))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedRoomType = value;
-                });
-              },
+              items: roomTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+              onChanged: (value) => setState(() => selectedRoomType = value),
               hint: const Text('Select room type'),
             ),
             const SizedBox(height: 20),
-            // Date Picker
             TextFormField(
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.calendar_today),
                 hintText: 'Select date',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(40.0)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(40.0)),
               ),
               onTap: () async {
                 final date = await showDatePicker(
@@ -231,26 +265,20 @@ class _SearchPageState extends State<SearchPage> {
                   lastDate: DateTime(2100),
                 );
                 if (date != null) {
-                  setState(() {
-                    selectedDate = date;
-                  });
+                  setState(() => selectedDate = date);
                 }
               },
               readOnly: true,
               controller: TextEditingController(
-                text: selectedDate != null
-                    ? '${selectedDate!.toLocal()}'.split(' ')[0]
-                    : '',
+                text: selectedDate != null ? '${selectedDate!.toLocal()}'.split(' ')[0] : '',
               ),
             ),
             const SizedBox(height: 20),
-            // Time Picker
             TextFormField(
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.access_time),
                 hintText: 'Select time',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(40.0)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(40.0)),
               ),
               onTap: () async {
                 final time = await showTimePicker(
@@ -258,9 +286,7 @@ class _SearchPageState extends State<SearchPage> {
                   initialTime: TimeOfDay.now(),
                 );
                 if (time != null) {
-                  setState(() {
-                    selectedTime = time;
-                  });
+                  setState(() => selectedTime = time);
                 }
               },
               readOnly: true,
@@ -269,40 +295,50 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
             const SizedBox(height: 30),
-            // Search Button
             ElevatedButton(
               onPressed: _searchRooms,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 50.0, vertical: 15.0),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50.0)),
+                padding: const EdgeInsets.symmetric(horizontal: 50.0, vertical: 15.0),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50.0)),
               ),
-              child: const Text(
-                'SEARCH',
-                style: TextStyle(fontSize: 16.0, color: Colors.white),
-              ),
+              child: const Text('SEARCH', style: TextStyle(fontSize: 16.0, color: Colors.white)),
             ),
             const SizedBox(height: 30),
-            // Search Results
-            if (filteredBookings.isNotEmpty)
+            if (availableRooms.isNotEmpty)
               Expanded(
                 child: ListView.builder(
-                  itemCount: filteredBookings.length,
+                  itemCount: availableRooms.length,
                   itemBuilder: (context, index) {
-                    final booking = filteredBookings[index];
-                    return ListTile(
-                      title: Text(booking['roomType']),
-                      subtitle: Text(
-                          'Date: ${booking['date']} | Start Time: ${booking['startTime']} | End Time: ${booking['endTime']}'),
+                    final room = availableRooms[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ListTile(
+                        title: Text(room['name']),
+                        subtitle: Text('${room['type']} - Capacity: ${room['capacity']} people'),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            // Navigate to booking page
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => room['type'] == 'Study Room'
+                                    ? const AvailableStudyRoomPage()
+                                    : const AvailableFacilityPage(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(255, 1, 10, 61),
+                          ),
+                          child: const Text('Book', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
                     );
                   },
                 ),
               )
-            else if (filteredBookings.isEmpty &&
-                selectedDate != null &&
-                selectedTime != null)
+            else if (availableRooms.isEmpty && selectedDate != null && selectedTime != null)
               const Text('No rooms available for the selected criteria.'),
           ],
         ),
@@ -313,49 +349,24 @@ class _SearchPageState extends State<SearchPage> {
         unselectedItemColor: Colors.white70,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_rounded),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_rounded),
-            label: 'Booking History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_outlined),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book_rounded), label: 'Booking'),
+          BottomNavigationBarItem(icon: Icon(Icons.people_alt_outlined), label: 'Profile'),
         ],
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HomePage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const HomePage()));
               break;
             case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SearchPage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchPage()));
               break;
             case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const BookingHistoryPage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const BookingHistoryPage()));
               break;
             case 3:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfilePage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfilePage()));
               break;
           }
         },

@@ -43,25 +43,19 @@ class BookingListPage extends StatelessWidget {
           .get();
 
       if (userDoc.exists) {
+        final data = userDoc.data();
         return {
-          'name': userDoc.data()?['name'] ?? 'Unknown User',
-          'role': userDoc.data()?['role'] ?? 'User',
-          'matricId': userDoc.data()?['matricID'] ?? 'N/A',
+          'name': data?['name'] ?? 'Unknown User',
+          'role': data?['role'] ?? 'User',
+          'matricId': data?['matricID'] ?? 'N/A',
         };
+      } else {
+        print('User document not found for userId: $userId');
       }
-      return {
-        'name': 'Unknown User',
-        'role': 'User',
-        'matricId': 'N/A',
-      };
     } catch (e) {
-      print('Error fetching user details: $e');
-      return {
-        'name': 'Unknown User',
-        'role': 'User',
-        'matricId': 'N/A',
-      };
+      print('Error fetching user details for userId $userId: $e');
     }
+    return {'name': 'Unknown User', 'role': 'User', 'matricId': 'N/A'};
   }
 
   Future<List<Map<String, dynamic>>> _processBookings(

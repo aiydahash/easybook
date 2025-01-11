@@ -4,6 +4,8 @@ import 'search-page.dart';
 import 'booking/booking-history.dart';
 import 'registration/profile-page.dart';
 import '../main-page.dart';
+import '../providers/user_manager.dart';
+import '../domain/user_model.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -14,94 +16,147 @@ class NotificationPage extends StatefulWidget {
 
 class _NotificationPageState extends State<NotificationPage> {
   late Stream<List<BookingNotification>> _notificationsStream;
+  AppUser? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _notificationsStream = _getNotifications();
+    _initializeUserData();
+  }
+
+  Future<void> _initializeUserData() async {
+    final user = UserManager.getCurrentUser();
+    setState(() {
+      _currentUser = user;
+      _notificationsStream = _getNotifications();
+    });
   }
 
   Stream<List<BookingNotification>> _getNotifications() {
-  final now = DateTime.now();
-
-  return FirebaseFirestore.instance
-      .collection('bookings')
-      .where('status', isEqualTo: 'UPCOMING')
-      .snapshots()
-      .map((bookingsSnapshot) {
-    final List<BookingNotification> notifications = [];
-
-    for (var doc in bookingsSnapshot.docs) {
-      final data = doc.data();
-      debugPrint('Document data: $data'); // Debug: Print each document's data
-
-      try {
-        // Safely retrieve and parse Firestore fields
-        final roomName = data['roomName'] as String? ?? 'Unknown Room';
-        final numberOfPeople = data['peopleCount'] as int? ?? 0;
-        final dateStr = data['date'] as String?;
-        final startTime = data['startTime'] as String? ?? 'Unknown';
-        final endTime = data['endTime'] as String? ?? 'Unknown';
-        final status = data['status'] as String? ?? 'Unknown Status';
-
-        if (dateStr == null) {
-          debugPrint('Missing "date" field in document ${doc.id}');
-          continue; // Skip this document
-        }
-
-        // Parse date
-        final bookingDate = DateTime.tryParse(dateStr);
-        if (bookingDate == null) {
-          debugPrint('Invalid date format in document ${doc.id}: $dateStr');
-          continue; // Skip this document
-        }
-
-        // Add notification if within 24 hours
-        if (bookingDate.difference(now).inHours <= 24) {
-          notifications.add(
-            BookingNotification(
-              roomName: roomName,
-              numberOfPeople: numberOfPeople,
-              date: dateStr,
-              time: '$startTime - $endTime',
-              status: status,
-            ),
-          );
-        }
-      } catch (e, stackTrace) {
-        debugPrint('Error processing document ${doc.id}: $e');
-        debugPrint('StackTrace: $stackTrace');
-      }
+    // Return empty stream if user is not logged in or is Library Staff
+    if (_currentUser == null || !UserManager.canAccessBookingFeatures()) {
+      return Stream.value([]);
     }
 
-    // Sort notifications by date
-    notifications.sort((a, b) {
-      final timestampA = DateTime.tryParse(a.date) ?? DateTime(1970);
-      final timestampB = DateTime.tryParse(b.date) ?? DateTime(1970);
-      return timestampB.compareTo(timestampA);
-    });
+    final now = DateTime.now();
 
-    return notifications;
-  });
-}
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('matricID',
+            isEqualTo: _currentUser!.matricID) // Use matricID from AppUser
+        .where('status', isEqualTo: 'UPCOMING')
+        .snapshots()
+        .map((bookingsSnapshot) {
+      final List<BookingNotification> notifications = [];
+
+      for (var doc in bookingsSnapshot.docs) {
+        final data = doc.data();
+        debugPrint('Document data: $data');
+
+        try {
+          final roomName = data['roomName'] as String? ?? 'Unknown Room';
+          final numberOfPeople = data['peopleCount'] as int? ?? 0;
+          final dateStr = data['date'] as String?;
+          final startTime = data['startTime'] as String? ?? 'Unknown';
+          final endTime = data['endTime'] as String? ?? 'Unknown';
+          final status = data['status'] as String? ?? 'Unknown Status';
+
+          if (dateStr == null) {
+            debugPrint('Missing "date" field in document ${doc.id}');
+            continue;
+          }
+
+          final bookingDate = DateTime.tryParse(dateStr);
+          if (bookingDate == null) {
+            debugPrint('Invalid date format in document ${doc.id}: $dateStr');
+            continue;
+          }
+
+          // Add notification if within 24 hours
+          if (bookingDate.difference(now).inHours <= 24) {
+            notifications.add(
+              BookingNotification(
+                roomName: roomName,
+                numberOfPeople: numberOfPeople,
+                date: dateStr,
+                time: '$startTime - $endTime',
+                status: status,
+              ),
+            );
+          }
+        } catch (e, stackTrace) {
+          debugPrint('Error processing document ${doc.id}: $e');
+          debugPrint('StackTrace: $stackTrace');
+        }
+      }
+
+      notifications.sort((a, b) {
+        final timestampA = DateTime.tryParse(a.date) ?? DateTime(1970);
+        final timestampB = DateTime.tryParse(b.date) ?? DateTime(1970);
+        return timestampB.compareTo(timestampA);
+      });
+
+      return notifications;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Show restricted access message for Library Staff
+    if (_currentUser != null && !UserManager.canAccessBookingFeatures()) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color.fromARGB(255, 1, 10, 61),
+          title: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(width: 8),
+              Text(
+                'Easy',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontStyle: FontStyle.italic,
+                  fontSize: 18,
+                ),
+              ),
+              Text(
+                'Book',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontStyle: FontStyle.italic,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.arrow_circle_left_outlined,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF010A3D),
+        body: const Center(
+          child: Text(
+            'Notifications are not available for Library Staff',
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+      );
+    }
+
+    // Regular notification page for Students and UMPSA Staff
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.notifications_active_outlined,
-            color: Colors.white,
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const NotificationPage()),
-            );
-          },
-        ),
         title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -144,19 +199,33 @@ class _NotificationPageState extends State<NotificationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Notifications',
-              style: TextStyle(
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+            Row(
+              children: [
+                const Text(
+                  'Notifications',
+                  style: TextStyle(
+                    fontSize: 20.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
             ),
             const SizedBox(height: 20),
             Expanded(
               child: StreamBuilder<List<BookingNotification>>(
                 stream: _notificationsStream,
                 builder: (context, snapshot) {
+                  if (_currentUser == null) {
+                    return const Center(
+                      child: Text(
+                        'Please log in to view notifications',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
+                  }
+
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: CircularProgressIndicator(color: Colors.white),
@@ -204,59 +273,6 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-        selectedItemColor: Colors.yellow,
-        unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_rounded),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book_rounded),
-            label: 'Booking History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_outlined),
-            label: 'Profile',
-          ),
-        ],
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HomePage()),
-              );
-              break;
-            case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SearchPage()),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const BookingHistoryPage()),
-              );
-              break;
-            case 3:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
-              );
-              break;
-          }
-        },
       ),
     );
   }
