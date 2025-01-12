@@ -17,6 +17,7 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   void initState() {
     super.initState();
+    _notificationsStream = Stream.value([]); // Initialize with default value
     _initializeUserData();
   }
 
@@ -33,56 +34,99 @@ class _NotificationPageState extends State<NotificationPage> {
       return Stream.value([]);
     }
 
-    final now = DateTime.now();
-
-    return FirebaseFirestore.instance
+    // Room bookings stream
+    final roomBookingsStream = FirebaseFirestore.instance
         .collection('bookings')
         .where('matricID', isEqualTo: _currentUser!.matricID)
-        .where('status', isEqualTo: 'UPCOMING')
-        .snapshots()
-        .map((snapshot) {
-      final List<BookingNotification> notifications = [];
+        .snapshots() // Fetch all bookings
+        .map((snapshot) => _processBookingDocs(snapshot.docs, 'room'));
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
+    // Facility bookings stream
+    final facilityBookingsStream = FirebaseFirestore.instance
+        .collection('facility_bookings')
+        .where('matricID', isEqualTo: _currentUser!.matricID)
+        .snapshots() // Fetch all bookings
+        .map((snapshot) => _processBookingDocs(snapshot.docs, 'facility'));
 
-        try {
-          final roomName = data['roomName'] ?? 'Unknown Room';
-          final numberOfPeople = data['peopleCount'] ?? 0;
-          final dateStr = data['date'] ?? '';
-          final startTime = data['startTime'] ?? 'Unknown';
-          final endTime = data['endTime'] ?? 'Unknown';
-          final status = data['status'] ?? 'Unknown Status';
+    // Combine the streams manually
+    return Stream<List<BookingNotification>>.multi((controller) {
+      List<BookingNotification> roomNotifications = [];
+      List<BookingNotification> facilityNotifications = [];
 
-          final bookingDate = DateTime.tryParse(dateStr);
-          if (bookingDate == null) {
-            debugPrint('Invalid date format in document ${doc.id}: $dateStr');
-            continue;
-          }
-
-          final timeUntilBooking = bookingDate.difference(now).inHours;
-          if (timeUntilBooking > 0 && timeUntilBooking <= 24) {
-            notifications.add(BookingNotification(
-              roomName: roomName,
-              numberOfPeople: numberOfPeople,
-              date: dateStr,
-              time: '$startTime - $endTime',
-              status: status,
-            ));
-          }
-        } catch (e) {
-          debugPrint('Error processing document ${doc.id}: $e');
-        }
+      void notifyListeners() {
+        final allNotifications = [
+          ...roomNotifications,
+          ...facilityNotifications,
+        ];
+        // Sort notifications (optional)
+        allNotifications.sort((a, b) {
+          final dateA = DateTime.tryParse(a.date) ?? DateTime(1970);
+          final dateB = DateTime.tryParse(b.date) ?? DateTime(1970);
+          return dateA.compareTo(dateB);
+        });
+        controller.add(allNotifications);
       }
 
-      notifications.sort((a, b) {
-        final dateA = DateTime.tryParse(a.date) ?? DateTime(1970);
-        final dateB = DateTime.tryParse(b.date) ?? DateTime(1970);
-        return dateA.compareTo(dateB);
+      final roomSubscription = roomBookingsStream.listen((notifications) {
+        roomNotifications = notifications;
+        notifyListeners();
       });
 
-      return notifications;
+      final facilitySubscription = facilityBookingsStream.listen((notifications) {
+        facilityNotifications = notifications;
+        notifyListeners();
+      });
+
+      controller.onCancel = () {
+        roomSubscription.cancel();
+        facilitySubscription.cancel();
+      };
     });
+  }
+
+  List<BookingNotification> _processBookingDocs(
+      List<DocumentSnapshot> docs, String type) {
+    final now = DateTime.now();
+    final List<BookingNotification> notifications = [];
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      try {
+        final name = type == 'room'
+            ? data['roomName'] ?? 'Unknown Room'
+            : data['facilityName'] ?? 'Unknown Facility';
+        final numberOfPeople = data['peopleCount'] ?? 0;
+        final dateStr = data['date'] ?? '';
+        final startTime = data['startTime'] ?? 'Unknown';
+        final endTime = data['endTime'] ?? 'Unknown';
+        final status = data['status'] ?? 'Unknown Status';
+
+        final bookingDate = DateTime.tryParse(dateStr);
+        if (bookingDate == null) {
+          debugPrint('Invalid date format in document ${doc.id}: $dateStr');
+          continue;
+        }
+
+        notifications.add(BookingNotification(
+          roomName: name,
+          numberOfPeople: numberOfPeople,
+          date: dateStr,
+          time: '$startTime - $endTime',
+          status: status,
+        ));
+      } catch (e) {
+        debugPrint('Error processing document ${doc.id}: $e');
+      }
+    }
+
+    return notifications;
+  }
+
+
+  int _compareDates(String dateA, String dateB) {
+    final parsedDateA = DateTime.tryParse(dateA) ?? DateTime(1970);
+    final parsedDateB = DateTime.tryParse(dateB) ?? DateTime(1970);
+    return parsedDateA.compareTo(parsedDateB);
   }
 
   @override
@@ -228,7 +272,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   if (notifications.isEmpty) {
                     return const Center(
                       child: Text(
-                        'No upcoming bookings within 24 hours',
+                        'No upcoming bookings within 24 hours.',
                         style: TextStyle(color: Colors.white),
                       ),
                     );

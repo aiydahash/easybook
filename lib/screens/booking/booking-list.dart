@@ -1,27 +1,94 @@
+import 'package:easybook/screens/booking/booking-history.dart';
+import 'package:easybook/screens/notification-page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'booking-history.dart';
 import '../../main-page.dart';
-import '../notification-page.dart';
-import '../registration/profile-page.dart';
 import '../search-page.dart';
+import '../registration/profile-page.dart';
 
-class BookingListPage extends StatelessWidget {
+class BookingListPage extends StatefulWidget {
   const BookingListPage({super.key});
 
+  @override
+  State<BookingListPage> createState() => _BookingListPageState();
+}
+
+class _BookingListPageState extends State<BookingListPage> {
+  Future<List<Map<String, dynamic>>> _fetchBookings() async {
+    try {
+      final roomSnapshots = await FirebaseFirestore.instance
+          .collection('bookings')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      final facilitySnapshots = await FirebaseFirestore.instance
+          .collection('facility_bookings')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return _processBookings(roomSnapshots, facilitySnapshots);
+    } catch (e) {
+      print('Error fetching bookings: $e');
+      return []; // Return an empty list on error
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _processBookings(
+    QuerySnapshot<Map<String, dynamic>> roomSnapshot,
+    QuerySnapshot<Map<String, dynamic>> facilitySnapshot,
+  ) async {
+    List<Map<String, dynamic>> allBookings = [];
+
+    try {
+      for (var doc in roomSnapshot.docs) {
+        final data = doc.data();
+        allBookings.add({
+          'roomName': data['roomName'] ?? 'Unknown Room',
+          'formattedDate': _formatTimestamp(data['date']),
+          'startTime': data['startTime'] ?? 'Not specified',
+          'endTime': data['endTime'] ?? 'Not specified',
+          'status': data['status'] ?? 'UPCOMING',
+        });
+      }
+
+      for (var doc in facilitySnapshot.docs) {
+        final data = doc.data();
+        allBookings.add({
+          'roomName': data['facilityName'] ?? 'Unknown Facility',
+          'formattedDate': _formatTimestamp(data['date']),
+          'startTime': data['startTime'] ?? 'Not specified',
+          'endTime': data['endTime'] ?? 'Not specified',
+          'status': data['status'] ?? 'UPCOMING',
+        });
+      }
+
+      allBookings.sort((a, b) {
+        final timestampA = a['timestamp'] as Timestamp?;
+        final timestampB = b['timestamp'] as Timestamp?;
+        if (timestampA == null || timestampB == null) return 0;
+        return timestampB.compareTo(timestampA);
+      });
+    } catch (e) {
+      print('Error processing bookings: $e');
+    }
+
+    return allBookings;
+  }
+
   String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Unknown Date';
+
     if (timestamp is Timestamp) {
       final date = timestamp.toDate();
-      return '${date.day}/${date.month}/${date.year}';
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     } else if (timestamp is String) {
       return timestamp;
     }
     return 'Unknown Date';
   }
 
-// Helper method to get status color
   Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
+    switch (status.trim().toUpperCase()) {
       case 'COMPLETED':
         return Colors.green;
       case 'CANCELLED':
@@ -33,105 +100,6 @@ class BookingListPage extends StatelessWidget {
       default:
         return Colors.grey;
     }
-  }
-
-  Future<Map<String, dynamic>> _getUserDetails(String userId) async {
-    try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-
-      if (userDoc.exists) {
-        final data = userDoc.data();
-        return {
-          'name': data?['name'] ?? 'Unknown User',
-          'role': data?['role'] ?? 'User',
-          'matricId': data?['matricID'] ?? 'N/A',
-        };
-      } else {
-        print('User document not found for userId: $userId');
-      }
-    } catch (e) {
-      print('Error fetching user details for userId $userId: $e');
-    }
-    return {'name': 'Unknown User', 'role': 'User', 'matricId': 'N/A'};
-  }
-
-  Future<List<Map<String, dynamic>>> _processBookings(
-    QuerySnapshot? roomSnapshot,
-    QuerySnapshot? facilitySnapshot,
-  ) async {
-    List<Map<String, dynamic>> allBookings = [];
-
-    if (roomSnapshot != null) {
-      for (var doc in roomSnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final userId = data['userId'] ?? '';
-        final Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
-        final DateTime dateTime = timestamp.toDate();
-        final String bookingDate = data['date'] ??
-            '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-
-        Map<String, dynamic> userDetails;
-        if (userId.isNotEmpty) {
-          userDetails = await _getUserDetails(userId);
-        } else {
-          userDetails = {
-            'name': data['userName'] ?? 'Unknown User',
-            'role': data['userRole'] ?? 'User',
-            'matricId': data['userMatricId'] ?? 'N/A',
-          };
-        }
-
-        allBookings.add({
-          ...data,
-          'bookingType': 'room',
-          'roomName': data['roomName'],
-          'userName': userDetails['name'],
-          'userRole': userDetails['role'],
-          'userMatricId': userDetails['matricId'],
-          'formattedDate': bookingDate,
-        });
-      }
-    }
-
-    if (facilitySnapshot != null) {
-      for (var doc in facilitySnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final userId = data['userId'] ?? '';
-        final Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
-        final DateTime dateTime = timestamp.toDate();
-        final String bookingDate = data['date'] ??
-            '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-
-        Map<String, dynamic> userDetails;
-        if (userId.isNotEmpty) {
-          userDetails = await _getUserDetails(userId);
-        } else {
-          userDetails = {
-            'name': data['userName'] ?? 'Unknown User',
-            'role': data['userRole'] ?? 'User',
-            'matricId': data['userMatricId'] ?? 'N/A',
-          };
-        }
-
-        allBookings.add({
-          ...data,
-          'bookingType': 'facility',
-          'roomName': data['facilityName'],
-          'userName': userDetails['name'],
-          'userRole': userDetails['role'],
-          'userMatricId': userDetails['matricId'],
-          'formattedDate': bookingDate,
-        });
-      }
-    }
-
-    allBookings.sort((a, b) =>
-        (b['timestamp'] as Timestamp).compareTo(a['timestamp'] as Timestamp));
-
-    return allBookings;
   }
 
   @override
@@ -201,131 +169,74 @@ class BookingListPage extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('bookings')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, roomSnapshot) {
-                return StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('facility_bookings')
-                      .orderBy('timestamp', descending: true)
-                      .snapshots(),
-                  builder: (context, facilitySnapshot) {
-                    if (roomSnapshot.connectionState ==
-                            ConnectionState.waiting ||
-                        facilitySnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchBookings(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF020B45),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error fetching bookings: ${snapshot.error}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final allBookings = snapshot.data ?? [];
+
+                if (allBookings.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.event_busy,
+                          size: 48,
                           color: Color(0xFF020B45),
                         ),
-                      );
-                    }
-
-                    if (roomSnapshot.hasError || facilitySnapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                              size: 48,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Error: ${roomSnapshot.error ?? facilitySnapshot.error}',
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          ],
+                        SizedBox(height: 16),
+                        Text(
+                          'No bookings available',
+                          style: TextStyle(
+                            color: Color(0xFF020B45),
+                            fontSize: 16,
+                          ),
                         ),
-                      );
-                    }
+                      ],
+                    ),
+                  );
+                }
 
-                    return FutureBuilder<List<Map<String, dynamic>>>(
-                      future: _processBookings(
-                        roomSnapshot.data,
-                        facilitySnapshot.data,
-                      ),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF020B45),
-                            ),
-                          );
-                        }
-
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: Colors.red,
-                                  size: 48,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Error processing bookings: ${snapshot.error}',
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        final allBookings = snapshot.data ?? [];
-
-                        if (allBookings.isEmpty) {
-                          return const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.event_busy,
-                                  size: 48,
-                                  color: Color(0xFF020B45),
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  'No bookings available',
-                                  style: TextStyle(
-                                    color: Color(0xFF020B45),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          itemCount: allBookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = allBookings[index];
-                            return BookingCard(
-                              name: booking['userName'],
-                              role: booking['userRole'],
-                              matricId: booking['userMatricId'],
-                              roomName: booking['roomName'],
-                              bookingDate:
-                                  _formatTimestamp(booking['timestamp']),
-                              startTime:
-                                  booking['startTime'] ?? 'Not specified',
-                              endTime: booking['endTime'] ?? 'Not specified',
-                              status: booking['status'] ?? 'UPCOMING',
-                              statusColor: _getStatusColor(
-                                  booking['status'] ?? 'UPCOMING'),
-                            );
-                          },
-                        );
-                      },
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  itemCount: allBookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = allBookings[index];
+                    return BookingCard(
+                      roomName: booking['roomName'],
+                      bookingDate: booking['formattedDate'],
+                      startTime: booking['startTime'],
+                      endTime: booking['endTime'],
+                      status: booking['status'],
+                      statusColor: _getStatusColor(booking['status']),
                     );
                   },
                 );
@@ -392,9 +303,6 @@ class BookingListPage extends StatelessWidget {
 }
 
 class BookingCard extends StatelessWidget {
-  final String name;
-  final String role;
-  final String matricId;
   final String roomName;
   final String bookingDate;
   final String startTime;
@@ -404,9 +312,6 @@ class BookingCard extends StatelessWidget {
 
   const BookingCard({
     super.key,
-    required this.name,
-    required this.role,
-    required this.matricId,
     required this.roomName,
     required this.bookingDate,
     required this.startTime,
@@ -425,84 +330,66 @@ class BookingCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 15),
       child: Padding(
         padding: const EdgeInsets.all(15.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Main content of the card
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        "$role (ID: $matricId)",
-                        style: const TextStyle(
-                          color: Colors.yellow,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+                Text(
+                  "Room: $roomName",
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(15.0),
-                  ),
-                  child: Text(
-                    status,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today,
+                      color: Colors.white70,
+                      size: 14,
                     ),
+                    const SizedBox(width: 5),
+                    Text(
+                      bookingDate,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(width: 15),
+                    const Icon(
+                      Icons.access_time,
+                      color: Colors.white70,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      "$startTime - $endTime",
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            // Positioned status label at the top-right
+            Positioned(
+              top: 1,
+              right: 2,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
+                child: Text(
+                  status,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Room: $roomName",
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 5),
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: Colors.white70,
-                  size: 14,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  bookingDate,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                const SizedBox(width: 15),
-                const Icon(
-                  Icons.access_time,
-                  color: Colors.white70,
-                  size: 14,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  "$startTime - $endTime",
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ],
+              ),
             ),
           ],
         ),

@@ -1,9 +1,8 @@
-import 'package:easybook/providers/user_manager.dart';
+import 'package:easybook/main-page.dart';
+import 'package:easybook/screens/notification-page.dart';
+import 'package:easybook/screens/registration/profile-page.dart';
+import 'package:easybook/screens/search-page.dart';
 import 'package:flutter/material.dart';
-import '../../main-page.dart';
-import '../notification-page.dart';
-import '../search-page.dart';
-import '../registration/profile-page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BookingHistoryPage extends StatelessWidget {
@@ -11,44 +10,14 @@ class BookingHistoryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if user can access booking features (only Student and UMPSA Staff)
-    if (!UserManager.canAccessBookingFeatures()) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Access denied. Only Students and UMPSA Staff can view booking history.'),
-          ),
-        );
-      });
-      return const SizedBox.shrink();
-    }
-
-    // Get current user
-    final currentUser = UserManager.getCurrentUser();
-    if (currentUser == null || currentUser.role == 'Library Staff') {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            currentUser == null
-                ? 'Please log in to view booking history'
-                : 'Library Staff cannot access booking history',
-            style: const TextStyle(color: Colors.black87),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         leading: IconButton(
-          icon: const Icon(Icons.notifications_active_outlined,
-              color: Colors.white),
+          icon: const Icon(
+            Icons.notifications_active_outlined,
+            color: Colors.white,
+          ),
           onPressed: () {
             Navigator.push(
               context,
@@ -82,41 +51,62 @@ class BookingHistoryPage extends StatelessWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.arrow_circle_left_outlined,
-                color: Colors.white),
+            icon: const Icon(
+              Icons.arrow_circle_left_outlined,
+              color: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
+      backgroundColor: const Color(0xFF010A3D),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: FutureBuilder<List<BookingItem>>(
-          future: _fetchBookings(currentUser.matricID),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('bookings')
+              .orderBy('timestamp', descending: true)
+              .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
             if (snapshot.hasError) {
-              return const Center(child: Text('Error loading bookings'));
+              return Center(child: Text('Error: ${snapshot.error}'));
             }
 
-            final allBookings = snapshot.data ?? [];
-
-            if (allBookings.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No bookings available.',
-                  style: TextStyle(color: Colors.white),
-                ),
-              );
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Text('No bookings found.'));
             }
+
+            final bookings = snapshot.data!.docs;
 
             return ListView.builder(
-              itemCount: allBookings.length,
+              itemCount: bookings.length,
               itemBuilder: (context, index) {
-                final booking = allBookings[index];
-                return BookingCard(booking: booking);
+                final doc = bookings[index];
+                final data = doc.data() as Map<String, dynamic>;
+
+                final status = (data['status'] ?? 'UPCOMING').toUpperCase();
+                final statusColor = _getStatusColor(status);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 15.0),
+                  child: BookingCard(
+                    bookingId: doc.id,
+                    name: data['roomName'] ?? 'Unknown Room',
+                    type: 'Study Room',
+                    peopleCount: data['peopleCount'] ?? 0,
+                    status: status,
+                    statusColor: statusColor,
+                    details: BookingDetails(
+                      date: data['date'] ?? 'Unknown Date',
+                      startTime: data['startTime'] ?? 'Unknown Time',
+                      endTime: data['endTime'] ?? 'Unknown Time',
+                    ),
+                  ),
+                );
               },
             );
           },
@@ -175,88 +165,31 @@ class BookingHistoryPage extends StatelessWidget {
           }
         },
       ),
-      backgroundColor: const Color(0xFF010A3D),
     );
   }
 
-  Future<List<BookingItem>> _fetchBookings(String matricID) async {
-    final List<BookingItem> allBookings = [];
-
-    try {
-      // Fetch room bookings
-      final roomSnapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('matricID', isEqualTo: matricID)
-          .orderBy('timestamp', descending: true)
-          .get();
-      for (var doc in roomSnapshot.docs) {
-        final data = doc.data();
-        allBookings.add(
-          BookingItem(
-            id: doc.id,
-            name: data['roomName'] ?? 'Unknown Room',
-            type: 'Study Room',
-            peopleCount: data['peopleCount'] ?? 0,
-            status: data['status'] ?? 'UPCOMING',
-            timestamp: data['timestamp'] ?? Timestamp.now(),
-            date: data['date'] ?? 'Unknown Date',
-            startTime: data['startTime'] ?? 'Unknown Time',
-            endTime: data['endTime'] ?? 'Unknown Time',
-          ),
-        );
-      }
-
-      // Fetch facility bookings
-      final facilitySnapshot = await FirebaseFirestore.instance
-          .collection('facility_bookings')
-          .where('matricID', isEqualTo: matricID)
-          .orderBy('timestamp', descending: true)
-          .get();
-      for (var doc in facilitySnapshot.docs) {
-        final data = doc.data();
-        allBookings.add(
-          BookingItem(
-            id: doc.id,
-            name: data['facilityName'] ?? 'Unknown Facility',
-            type: 'Facility',
-            peopleCount: data['peopleCount'] ?? 0,
-            status: data['status'] ?? 'UPCOMING',
-            timestamp: data['timestamp'] ?? Timestamp.now(),
-            date: data['date'] ?? 'Unknown Date',
-            startTime: data['startTime'] ?? 'Unknown Time',
-            endTime: data['endTime'] ?? 'Unknown Time',
-          ),
-        );
-      }
-
-      // Sort all bookings by timestamp
-      allBookings.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    } catch (e) {
-      print('Error fetching bookings: $e');
+  Color _getStatusColor(String status) {
+    switch (status.trim().toUpperCase()) {
+      case 'COMPLETED':
+        return Colors.green;
+      case 'CANCELLED':
+        return Colors.red;
+      case 'PAST':
+        return Colors.yellow;
+      case 'UPCOMING':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
-
-    return allBookings;
   }
 }
 
-class BookingItem {
-  final String id;
-  final String name;
-  final String type;
-  final int peopleCount;
-  final String status;
-  final Timestamp timestamp;
+class BookingDetails {
   final String date;
   final String startTime;
   final String endTime;
 
-  BookingItem({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.peopleCount,
-    required this.status,
-    required this.timestamp,
+  BookingDetails({
     required this.date,
     required this.startTime,
     required this.endTime,
@@ -264,16 +197,129 @@ class BookingItem {
 }
 
 class BookingCard extends StatelessWidget {
-  final BookingItem booking;
+  final String bookingId;
+  final String name;
+  final String type;
+  final int peopleCount;
+  final String status;
+  final Color statusColor;
+  final BookingDetails? details;
 
-  const BookingCard({super.key, required this.booking});
+  const BookingCard({
+    super.key,
+    required this.bookingId,
+    required this.name,
+    required this.type,
+    required this.peopleCount,
+    required this.status,
+    required this.statusColor,
+    this.details,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        title: Text(booking.name),
-        subtitle: Text('${booking.type}\n${booking.date}'),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(15.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        type,
+                        style: const TextStyle(
+                          fontSize: 14.0,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(20.0),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Text(
+                    status,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '$peopleCount people',
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 14.0,
+              ),
+            ),
+            if (details != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F0FF),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Date: ${details!.date}',
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 14.0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Time: ${details!.startTime} - ${details!.endTime}',
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 14.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
