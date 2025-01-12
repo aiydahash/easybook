@@ -128,7 +128,7 @@ class RoomDetailsPage extends StatelessWidget {
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-        selectedItemColor: Colors.yellow,
+        selectedItemColor: Colors.white70,
         unselectedItemColor: Colors.white70,
         type: BottomNavigationBarType.fixed, // Ensures consistent icon spacing
         items: const [

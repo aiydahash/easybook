@@ -1,3 +1,4 @@
+import 'package:easybook/providers/user_manager.dart';
 import 'package:flutter/material.dart';
 import '../../main-page.dart';
 import '../notification-page.dart';
@@ -10,18 +11,48 @@ class BookingHistoryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if user can access booking features (only Student and UMPSA Staff)
+    if (!UserManager.canAccessBookingFeatures()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Access denied. Only Students and UMPSA Staff can view booking history.'),
+          ),
+        );
+      });
+      return const SizedBox.shrink();
+    }
+
+    // Get current user
+    final currentUser = UserManager.getCurrentUser();
+    if (currentUser == null || currentUser.role == 'Library Staff') {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            currentUser == null
+                ? 'Please log in to view booking history'
+                : 'Library Staff cannot access booking history',
+            style: const TextStyle(color: Colors.black87),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
         leading: IconButton(
-          icon: const Icon(
-            Icons.notifications_active_outlined,
-            color: Colors.white,
-          ),
+          icon: const Icon(Icons.notifications_active_outlined,
+              color: Colors.white),
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => NotificationPage()),
+              MaterialPageRoute(builder: (context) => const NotificationPage()),
             );
           },
         ),
@@ -51,140 +82,49 @@ class BookingHistoryPage extends StatelessWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.arrow_circle_left_outlined,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            icon: const Icon(Icons.arrow_circle_left_outlined,
+                color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('bookings')
-                    .orderBy('timestamp', descending: true)
-                    .snapshots(),
-                builder: (context, roomSnapshot) {
-                  return StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('facility_bookings')
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                    builder: (context, facilitySnapshot) {
-                      if (roomSnapshot.connectionState ==
-                              ConnectionState.waiting ||
-                          facilitySnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+        child: FutureBuilder<List<BookingItem>>(
+          future: _fetchBookings(currentUser.matricID),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-                      if (roomSnapshot.hasError || facilitySnapshot.hasError) {
-                        return const Center(
-                            child: Text('Error loading bookings'));
-                      }
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error loading bookings'));
+            }
 
-                      final List<BookingItem> allBookings = [];
+            final allBookings = snapshot.data ?? [];
 
-                      if (roomSnapshot.hasData) {
-                        for (var doc in roomSnapshot.data!.docs) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          final Timestamp timestamp =
-                              data['timestamp'] ?? Timestamp.now();
-                          final DateTime dateTime = timestamp.toDate();
-                          final String formattedDate = data['date'] ??
-                              '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+            if (allBookings.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No bookings available.',
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
+            }
 
-                          allBookings.add(
-                            BookingItem(
-                              id: doc.id,
-                              name: data['roomName'] ?? 'Unknown Room',
-                              type: 'Study Room',
-                              peopleCount: data['peopleCount'] ?? 0,
-                              status: data['status'] ?? 'UPCOMING',
-                              timestamp: timestamp,
-                              date: formattedDate,
-                              startTime: data['startTime'] ?? 'Unknown Time',
-                              endTime: data['endTime'] ?? 'Unknown Time',
-                            ),
-                          );
-                        }
-                      }
-
-                      if (facilitySnapshot.hasData) {
-                        for (var doc in facilitySnapshot.data!.docs) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          final Timestamp timestamp =
-                              data['timestamp'] ?? Timestamp.now();
-                          final DateTime dateTime = timestamp.toDate();
-                          final String formattedDate = data['date'] ??
-                              '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-
-                          allBookings.add(
-                            BookingItem(
-                              id: doc.id,
-                              name: data['facilityName'] ?? 'Unknown Facility',
-                              type: 'Facility',
-                              peopleCount: data['peopleCount'] ?? 0,
-                              status: data['status'] ?? 'UPCOMING',
-                              timestamp: timestamp,
-                              date: formattedDate,
-                              startTime: data['startTime'] ?? 'Unknown Time',
-                              endTime: data['endTime'] ?? 'Unknown Time',
-                            ),
-                          );
-                        }
-                      }
-
-                      allBookings
-                          .sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-                      if (allBookings.isEmpty) {
-                        return const Center(
-                            child: Text('No bookings available.'));
-                      }
-
-                      return ListView.builder(
-                        itemCount: allBookings.length,
-                        itemBuilder: (context, index) {
-                          final booking = allBookings[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 15.0),
-                            child: BookingCard(
-                              bookingId: booking.id,
-                              name: booking.name,
-                              type: booking.type,
-                              peopleCount: booking.peopleCount,
-                              status: booking.status,
-                              statusColor: booking.status == 'PAST'
-                                  ? Colors.yellow
-                                  : Colors.black,
-                              details: BookingDetails(
-                                date: booking.date,
-                                startTime: booking.startTime,
-                                endTime: booking.endTime,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+            return ListView.builder(
+              itemCount: allBookings.length,
+              itemBuilder: (context, index) {
+                final booking = allBookings[index];
+                return BookingCard(booking: booking);
+              },
+            );
+          },
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
-        selectedItemColor: Colors.yellow,
+        selectedItemColor: Colors.white70,
         unselectedItemColor: Colors.white70,
         type: BottomNavigationBarType.fixed,
         items: const [
@@ -210,7 +150,7 @@ class BookingHistoryPage extends StatelessWidget {
             case 0:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => HomePage()),
+                MaterialPageRoute(builder: (context) => const HomePage()),
               );
               break;
             case 1:
@@ -229,7 +169,7 @@ class BookingHistoryPage extends StatelessWidget {
             case 3:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
               break;
           }
@@ -237,6 +177,65 @@ class BookingHistoryPage extends StatelessWidget {
       ),
       backgroundColor: const Color(0xFF010A3D),
     );
+  }
+
+  Future<List<BookingItem>> _fetchBookings(String matricID) async {
+    final List<BookingItem> allBookings = [];
+
+    try {
+      // Fetch room bookings
+      final roomSnapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('matricID', isEqualTo: matricID)
+          .orderBy('timestamp', descending: true)
+          .get();
+      for (var doc in roomSnapshot.docs) {
+        final data = doc.data();
+        allBookings.add(
+          BookingItem(
+            id: doc.id,
+            name: data['roomName'] ?? 'Unknown Room',
+            type: 'Study Room',
+            peopleCount: data['peopleCount'] ?? 0,
+            status: data['status'] ?? 'UPCOMING',
+            timestamp: data['timestamp'] ?? Timestamp.now(),
+            date: data['date'] ?? 'Unknown Date',
+            startTime: data['startTime'] ?? 'Unknown Time',
+            endTime: data['endTime'] ?? 'Unknown Time',
+          ),
+        );
+      }
+
+      // Fetch facility bookings
+      final facilitySnapshot = await FirebaseFirestore.instance
+          .collection('facility_bookings')
+          .where('matricID', isEqualTo: matricID)
+          .orderBy('timestamp', descending: true)
+          .get();
+      for (var doc in facilitySnapshot.docs) {
+        final data = doc.data();
+        allBookings.add(
+          BookingItem(
+            id: doc.id,
+            name: data['facilityName'] ?? 'Unknown Facility',
+            type: 'Facility',
+            peopleCount: data['peopleCount'] ?? 0,
+            status: data['status'] ?? 'UPCOMING',
+            timestamp: data['timestamp'] ?? Timestamp.now(),
+            date: data['date'] ?? 'Unknown Date',
+            startTime: data['startTime'] ?? 'Unknown Time',
+            endTime: data['endTime'] ?? 'Unknown Time',
+          ),
+        );
+      }
+
+      // Sort all bookings by timestamp
+      allBookings.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    } catch (e) {
+      print('Error fetching bookings: $e');
+    }
+
+    return allBookings;
   }
 }
 
@@ -262,180 +261,20 @@ class BookingItem {
     required this.startTime,
     required this.endTime,
   });
-
-  String getFormattedDate() {
-    if (date != 'Unknown Date') {
-      return date;
-    } else {
-      final DateTime dateTime = timestamp.toDate();
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-    }
-  }
 }
 
 class BookingCard extends StatelessWidget {
-  final String bookingId;
-  final String name;
-  final String type;
-  final int peopleCount;
-  final String status;
-  final Color statusColor;
-  final BookingDetails? details;
+  final BookingItem booking;
 
-  const BookingCard({
-    super.key,
-    required this.bookingId,
-    required this.name,
-    required this.type,
-    required this.peopleCount,
-    required this.status,
-    required this.statusColor,
-    this.details,
-  });
-
-  Future<void> _deleteBooking(BuildContext context) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('bookings')
-          .doc(bookingId)
-          .delete();
-      await FirebaseFirestore.instance
-          .collection('facility_bookings')
-          .doc(bookingId)
-          .delete();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Booking deleted')));
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error deleting booking: $e')));
-    }
-  }
+  const BookingCard({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        type,
-                        style: const TextStyle(
-                          fontSize: 14.0,
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(20.0),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  child: Text(
-                    status,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Text(
-              '$peopleCount people',
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 14.0,
-              ),
-            ),
-            if (details != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10.0),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F0FF),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Date: ${details!.date}',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 14.0,
-                        ),
-                      ),
-                      Text(
-                        'Start Time: ${details!.startTime}',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 14.0,
-                        ),
-                      ),
-                      Text(
-                        'End Time: ${details!.endTime}',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 14.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  onPressed: () => _deleteBooking(context),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return Card(
+      child: ListTile(
+        title: Text(booking.name),
+        subtitle: Text('${booking.type}\n${booking.date}'),
       ),
     );
   }
-}
-
-class BookingDetails {
-  final String date;
-  final String startTime;
-  final String endTime;
-
-  BookingDetails({
-    required this.date,
-    required this.startTime,
-    required this.endTime,
-  });
 }

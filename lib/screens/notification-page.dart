@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'search-page.dart';
-import 'booking/booking-history.dart';
-import 'registration/profile-page.dart';
-import '../main-page.dart';
 import '../providers/user_manager.dart';
 import '../domain/user_model.dart';
 
@@ -33,7 +29,6 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Stream<List<BookingNotification>> _getNotifications() {
-    // Return empty stream if user is not logged in or is Library Staff
     if (_currentUser == null || !UserManager.canAccessBookingFeatures()) {
       return Stream.value([]);
     }
@@ -42,29 +37,22 @@ class _NotificationPageState extends State<NotificationPage> {
 
     return FirebaseFirestore.instance
         .collection('bookings')
-        .where('matricID',
-            isEqualTo: _currentUser!.matricID) // Use matricID from AppUser
+        .where('matricID', isEqualTo: _currentUser!.matricID)
         .where('status', isEqualTo: 'UPCOMING')
         .snapshots()
-        .map((bookingsSnapshot) {
+        .map((snapshot) {
       final List<BookingNotification> notifications = [];
 
-      for (var doc in bookingsSnapshot.docs) {
+      for (var doc in snapshot.docs) {
         final data = doc.data();
-        debugPrint('Document data: $data');
 
         try {
-          final roomName = data['roomName'] as String? ?? 'Unknown Room';
-          final numberOfPeople = data['peopleCount'] as int? ?? 0;
-          final dateStr = data['date'] as String?;
-          final startTime = data['startTime'] as String? ?? 'Unknown';
-          final endTime = data['endTime'] as String? ?? 'Unknown';
-          final status = data['status'] as String? ?? 'Unknown Status';
-
-          if (dateStr == null) {
-            debugPrint('Missing "date" field in document ${doc.id}');
-            continue;
-          }
+          final roomName = data['roomName'] ?? 'Unknown Room';
+          final numberOfPeople = data['peopleCount'] ?? 0;
+          final dateStr = data['date'] ?? '';
+          final startTime = data['startTime'] ?? 'Unknown';
+          final endTime = data['endTime'] ?? 'Unknown';
+          final status = data['status'] ?? 'Unknown Status';
 
           final bookingDate = DateTime.tryParse(dateStr);
           if (bookingDate == null) {
@@ -72,28 +60,25 @@ class _NotificationPageState extends State<NotificationPage> {
             continue;
           }
 
-          // Add notification if within 24 hours
-          if (bookingDate.difference(now).inHours <= 24) {
-            notifications.add(
-              BookingNotification(
-                roomName: roomName,
-                numberOfPeople: numberOfPeople,
-                date: dateStr,
-                time: '$startTime - $endTime',
-                status: status,
-              ),
-            );
+          final timeUntilBooking = bookingDate.difference(now).inHours;
+          if (timeUntilBooking > 0 && timeUntilBooking <= 24) {
+            notifications.add(BookingNotification(
+              roomName: roomName,
+              numberOfPeople: numberOfPeople,
+              date: dateStr,
+              time: '$startTime - $endTime',
+              status: status,
+            ));
           }
-        } catch (e, stackTrace) {
+        } catch (e) {
           debugPrint('Error processing document ${doc.id}: $e');
-          debugPrint('StackTrace: $stackTrace');
         }
       }
 
       notifications.sort((a, b) {
-        final timestampA = DateTime.tryParse(a.date) ?? DateTime(1970);
-        final timestampB = DateTime.tryParse(b.date) ?? DateTime(1970);
-        return timestampB.compareTo(timestampA);
+        final dateA = DateTime.tryParse(a.date) ?? DateTime(1970);
+        final dateB = DateTime.tryParse(b.date) ?? DateTime(1970);
+        return dateA.compareTo(dateB);
       });
 
       return notifications;
@@ -102,7 +87,6 @@ class _NotificationPageState extends State<NotificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Show restricted access message for Library Staff
     if (_currentUser != null && !UserManager.canAccessBookingFeatures()) {
       return Scaffold(
         appBar: AppBar(
@@ -153,7 +137,6 @@ class _NotificationPageState extends State<NotificationPage> {
       );
     }
 
-    // Regular notification page for Students and UMPSA Staff
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 1, 10, 61),
@@ -200,8 +183,8 @@ class _NotificationPageState extends State<NotificationPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: [
-                const Text(
+              children: const [
+                Text(
                   'Notifications',
                   style: TextStyle(
                     fontSize: 20.0,
@@ -209,7 +192,6 @@ class _NotificationPageState extends State<NotificationPage> {
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 10),
               ],
             ),
             const SizedBox(height: 20),
@@ -246,7 +228,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   if (notifications.isEmpty) {
                     return const Center(
                       child: Text(
-                        'No upcoming bookings',
+                        'No upcoming bookings within 24 hours',
                         style: TextStyle(color: Colors.white),
                       ),
                     );
